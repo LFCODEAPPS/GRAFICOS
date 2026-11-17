@@ -799,60 +799,118 @@
       }
     };
 
-    const PERIOD_THEMES = {
-      daily: {
-        selectorLabel: 'FECHA',
-        flagColors: [
-          '#f59e0b', '#0d9488', '#ea580c', '#2563eb',
-          '#7c3aed', '#65a30d', '#e11d48', '#0891b2'
-        ],
-        axisLeftColor: '#d97706',
-        lineColor: '#0284c7',
-        lineBg: 'rgba(2, 132, 199, 0.15)',
-        tabBg: '#f59e0b',
-        tabText: '#0f172a',
-        mttoHeaderBg: '#b45309',
-        mttoHeaderText: '#ffffff',
-        mttoCellBg: '#dbeafe',
-        badgeBg: '#fef3c7',
-        badgeText: '#b45309',
-        badgeBorder: '#fcd34d'
+    const MODE_PERIOD_THEMES = {
+      maquinaria: {
+        daily: {
+          selectorLabel: 'FECHA',
+          flagColors: [
+            '#f59e0b', '#0d9488', '#ea580c', '#2563eb',
+            '#7c3aed', '#65a30d', '#e11d48', '#0891b2'
+          ],
+          axisLeftColor: '#d97706',
+          lineColor: '#0284c7',
+          lineBg: 'rgba(2, 132, 199, 0.15)',
+          tabBg: '#f59e0b',
+          tabText: '#0f172a',
+          mttoHeaderBg: '#b45309',
+          mttoHeaderText: '#ffffff',
+          mttoCellBg: '#dbeafe',
+          badgeBg: '#fef3c7',
+          badgeText: '#b45309',
+          badgeBorder: '#fcd34d'
+        },
+        weekly: {
+          selectorLabel: 'SEMANA',
+          flagColors: [
+            '#10b981', '#f59e0b', '#4f46e5', '#e11d48',
+            '#06b6d4', '#f97316', '#8b5cf6', '#14b8a6'
+          ],
+          axisLeftColor: '#059669',
+          lineColor: '#6366f1',
+          lineBg: 'rgba(99, 102, 241, 0.15)',
+          tabBg: '#10b981',
+          tabText: '#ffffff',
+          mttoHeaderBg: '#065f46',
+          mttoHeaderText: '#ffffff',
+          mttoCellBg: '#d1fae5',
+          badgeBg: '#d1fae5',
+          badgeText: '#065f46',
+          badgeBorder: '#6ee7b7'
+        },
+        monthly: {
+          selectorLabel: 'MES',
+          flagColors: [
+            '#2563eb', '#f59e0b', '#059669', '#e11d48',
+            '#7c3aed', '#ea580c', '#0891b2', '#c026d3'
+          ],
+          axisLeftColor: '#1d4ed8',
+          lineColor: '#e11d48',
+          lineBg: 'rgba(225, 29, 72, 0.15)',
+          tabBg: '#2563eb',
+          tabText: '#ffffff',
+          mttoHeaderBg: '#1e3a8a',
+          mttoHeaderText: '#ffffff',
+          mttoCellBg: '#e0e7ff',
+          badgeBg: '#dbeafe',
+          badgeText: '#1e40af',
+          badgeBorder: '#93c5fd'
+        }
       },
-      weekly: {
-        selectorLabel: 'SEMANA',
-        flagColors: [
-          '#10b981', '#f59e0b', '#4f46e5', '#e11d48',
-          '#06b6d4', '#f97316', '#8b5cf6', '#14b8a6'
-        ],
-        axisLeftColor: '#059669',
-        lineColor: '#6366f1',
-        lineBg: 'rgba(99, 102, 241, 0.15)',
-        tabBg: '#10b981',
-        tabText: '#ffffff',
-        mttoHeaderBg: '#065f46',
-        mttoHeaderText: '#ffffff',
-        mttoCellBg: '#d1fae5',
-        badgeBg: '#d1fae5',
-        badgeText: '#065f46',
-        badgeBorder: '#6ee7b7'
-      },
-      monthly: {
-        selectorLabel: 'MES',
-        flagColors: [
-          '#2563eb', '#f59e0b', '#059669', '#e11d48',
-          '#7c3aed', '#ea580c', '#0891b2', '#c026d3'
-        ],
-        axisLeftColor: '#1d4ed8',
-        lineColor: '#e11d48',
-        lineBg: 'rgba(225, 29, 72, 0.15)',
-        tabBg: '#2563eb',
-        tabText: '#ffffff',
-        mttoHeaderBg: '#1e3a8a',
-        mttoHeaderText: '#ffffff',
-        mttoCellBg: '#e0e7ff',
-        badgeBg: '#dbeafe',
-        badgeText: '#1e40af',
-        badgeBorder: '#93c5fd'
+      volquetes: {
+        daily: {
+          selectorLabel: 'FECHA',
+          flagColors: [
+            '#7c3aed', '#0d9488', '#db2777', '#2563eb',
+            '#65a30d', '#0891b2', '#9333ea', '#e11d48'
+          ],
+          axisLeftColor: '#6d28d9',
+          lineColor: '#ea580c',
+          lineBg: 'rgba(234, 88, 12, 0.15)',
+          tabBg: '#7c3aed',
+          tabText: '#ffffff',
+          mttoHeaderBg: '#4c1d95',
+          mttoHeaderText: '#ffffff',
+          mttoCellBg: '#ede9fe',
+          badgeBg: '#ede9fe',
+          badgeText: '#5b21b6',
+          badgeBorder: '#c4b5fd'
+        },
+        weekly: {
+          selectorLabel: 'SEMANA',
+          flagColors: [
+            '#0891b2', '#7c3aed', '#d97706', '#059669',
+            '#e11d48', '#2563eb', '#65a30d', '#9333ea'
+          ],
+          axisLeftColor: '#0e7490',
+          lineColor: '#c026d3',
+          lineBg: 'rgba(192, 38, 211, 0.15)',
+          tabBg: '#0891b2',
+          tabText: '#ffffff',
+          mttoHeaderBg: '#155e75',
+          mttoHeaderText: '#ffffff',
+          mttoCellBg: '#cffafe',
+          badgeBg: '#cffafe',
+          badgeText: '#155e75',
+          badgeBorder: '#67e8f9'
+        },
+        monthly: {
+          selectorLabel: 'MES',
+          flagColors: [
+            '#ea580c', '#0d9488', '#7c3aed', '#0284c7',
+            '#65a30d', '#db2777', '#4f46e5', '#d97706'
+          ],
+          axisLeftColor: '#c2410c',
+          lineColor: '#0d9488',
+          lineBg: 'rgba(13, 148, 136, 0.15)',
+          tabBg: '#ea580c',
+          tabText: '#ffffff',
+          mttoHeaderBg: '#9a3412',
+          mttoHeaderText: '#ffffff',
+          mttoCellBg: '#ffedd5',
+          badgeBg: '#ffedd5',
+          badgeText: '#9a3412',
+          badgeBorder: '#fdba74'
+        }
       }
     };
 
@@ -868,6 +926,10 @@
     let rawRows = [];
     let allLugares = [];
     let charts = {};
+
+    function getCurrentTheme() {
+      return MODE_PERIOD_THEMES[currentMode][currentPeriod];
+    }
 
     function cleanSpaces(str) {
       return String(str || '')
@@ -1062,7 +1124,6 @@
         btn.classList.toggle('active', btn.dataset.mode === currentMode);
       });
 
-      // Reset checkboxes para cargar todas las unidades/placas del nuevo modo
       document.getElementById('equipoCheckboxList').innerHTML = '';
       fetchSheetData(false);
     }
@@ -1273,7 +1334,7 @@
     }
 
     function populateTemporalSelector(preserveSelection = false) {
-      const theme = PERIOD_THEMES[currentPeriod];
+      const theme = getCurrentTheme();
       document.getElementById('filterTemporalLabel').textContent = theme.selectorLabel;
 
       const sel = document.getElementById('filterTemporal');
@@ -1364,7 +1425,7 @@
 
     function updateDashboard() {
       const cfg = SHEET_CONFIGS[currentMode];
-      const theme = PERIOD_THEMES[currentPeriod];
+      const theme = getCurrentTheme();
       applyThemeColors(theme);
 
       const selectedTemporal = document.getElementById('filterTemporal').value;
@@ -1467,7 +1528,7 @@
       id: 'flagAndLabelsPlugin',
       afterDatasetsDraw(chart) {
         const { ctx } = chart;
-        const theme = PERIOD_THEMES[currentPeriod];
+        const theme = getCurrentTheme();
         const numCategories = chart.data.labels.length;
 
         const barBadgeYMap = new Array(numCategories).fill(null);
