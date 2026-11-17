@@ -119,7 +119,7 @@
       font-weight: 600;
     }
 
-    select, input[type="date"] {
+    select {
       background: var(--bg);
       color: var(--text);
       border: 1px solid var(--border);
@@ -129,7 +129,7 @@
       outline: none;
     }
 
-    select:focus, input[type="date"]:focus {
+    select:focus {
       border-color: var(--primary);
     }
 
@@ -210,12 +210,10 @@
     }
 
     .col-12 { grid-column: span 12; }
-    .col-8 { grid-column: span 8; }
     .col-6 { grid-column: span 6; }
-    .col-4 { grid-column: span 4; }
 
     @media (max-width: 1024px) {
-      .col-8, .col-6, .col-4 { grid-column: span 12; }
+      .col-6 { grid-column: span 12; }
     }
 
     .chart-header {
@@ -232,7 +230,13 @@
 
     .chart-wrapper {
       position: relative;
-      height: 320px;
+      height: 360px;
+      width: 100%;
+    }
+
+    .chart-wrapper-tall {
+      position: relative;
+      height: 460px;
       width: 100%;
     }
 
@@ -335,7 +339,7 @@
         </div>
 
         <div class="control-group">
-          <label for="filterEquipo">Tipo de Equipo</label>
+          <label for="filterEquipo">Equipo (Orden de Flota)</label>
           <select id="filterEquipo"><option value="ALL">Todos los equipos</option></select>
         </div>
 
@@ -350,7 +354,7 @@
         <div class="kpi-card">
           <div class="label">Total Horas Trabajadas</div>
           <div class="value" id="kpiHoras">0.0 h</div>
-          <div class="sub" id="kpiPromedioHoras">Promedio: 0.0 h / registro activo</div>
+          <div class="sub" id="kpiPromedioHoras">Promedio: 0.0 h / turno activo</div>
         </div>
         <div class="kpi-card">
           <div class="label">Combustible Abastecido</div>
@@ -358,7 +362,7 @@
           <div class="sub" id="kpiGalPorHora">Ratio global: 0.00 Gal/h</div>
         </div>
         <div class="kpi-card">
-          <div class="label">Equipos Activos (con horas > 0)</div>
+          <div class="label">Equipos Activos (con horas &gt; 0)</div>
           <div class="value" id="kpiEquipos">0</div>
           <div class="sub" id="kpiRegistros">0 registros filtrados</div>
         </div>
@@ -382,27 +386,27 @@
 
         <div class="chart-card col-6">
           <div class="chart-header">
-            <h2>Horas Totales por Tipo de Equipo</h2>
+            <h2>Horas Totales por Equipo (Orden de Flota)</h2>
           </div>
-          <div class="chart-wrapper">
+          <div class="chart-wrapper-tall">
             <canvas id="equipoChart"></canvas>
           </div>
         </div>
 
         <div class="chart-card col-6">
           <div class="chart-header">
-            <h2>Top 10 Máquinas por Horas Trabajadas</h2>
+            <h2>Combustible Abastecido (Gal) por Equipo</h2>
           </div>
-          <div class="chart-wrapper">
-            <canvas id="topMaquinasChart"></canvas>
+          <div class="chart-wrapper-tall">
+            <canvas id="combustibleEquipoChart"></canvas>
           </div>
         </div>
 
         <div class="chart-card col-12">
           <div class="chart-header">
-            <h2>Estado de Mantenimiento (Menor cantidad de Horas Restantes para Mtto)</h2>
+            <h2>Horas Restantes para Mantenimiento (Orden de Flota)</h2>
           </div>
-          <div class="chart-wrapper" style="height: 360px;">
+          <div class="chart-wrapper-tall">
             <canvas id="mttoChart"></canvas>
           </div>
         </div>
@@ -411,7 +415,7 @@
       <!-- Tabla de Últimos Registros -->
       <div class="table-card">
         <div class="chart-header">
-          <h2>Últimos 20 Registros Filtrados</h2>
+          <h2>Últimos 25 Registros Filtrados</h2>
         </div>
         <table>
           <thead>
@@ -441,6 +445,44 @@
     const GID = '1193959640';
     const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${GID}`;
 
+    // Orden oficial exacto de los equipos según la lista proporcionada
+    const ORDEN_EQUIPOS = [
+      'Excavadora 1 (336 D2L)',
+      'Excavadora 2 (320)',
+      'Excavadora 3 (336 DL)',
+      'Excavadora 4 (PC210 K)',
+      'Cargador F, (CAT)',
+      'Cargador F, (KOMATSU)',
+      'Retro Excavadora (Jhon Deere)',
+      'Retro Excavadora (Cat)',
+      'Tractor Oruga',
+      'Motoniveladora (GD555-5)',
+      'Rodillo 1 (CS533E CAT)',
+      'Rodillo 3 (CS533C CAT)',
+      'Mixer',
+      'Mini Cargador (Manitou)',
+      'Rodillo Rolas',
+      'Rodillo Neumático 3',
+      'Pavimentadora 2'
+    ];
+
+    const ORDEN_MAP = new Map(
+      ORDEN_EQUIPOS.map((nombre, index) => [nombre.trim().toLowerCase(), index])
+    );
+
+    function getEquipoOrderIndex(equipoName) {
+      if (!equipoName) return 9999;
+      const key = equipoName.trim().toLowerCase();
+      return ORDEN_MAP.has(key) ? ORDEN_MAP.get(key) : 9999;
+    }
+
+    function compareEquipos(a, b) {
+      const idxA = getEquipoOrderIndex(a);
+      const idxB = getEquipoOrderIndex(b);
+      if (idxA !== idxB) return idxA - idxB;
+      return String(a).localeCompare(String(b));
+    }
+
     let rawRows = [];
     let currentPeriod = 'daily';
     let charts = {};
@@ -451,7 +493,6 @@
       'septiembre': 9, 'setiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
     };
 
-    // Limpia números con comas decimales y texto como "118,50 Gal" o "104,8 Horas"
     function parseNum(val) {
       if (val === null || val === undefined || val === '') return 0;
       if (typeof val === 'number') return val;
@@ -462,29 +503,20 @@
       return isNaN(num) ? 0 : num;
     }
 
-    // Parsea fechas de Google Sheets (Date(2026,10,16) o "16/11/2026")
     function parseFecha(cell) {
       if (!cell) return null;
       const raw = cell.f || cell.v;
       if (!raw) return null;
 
       const str = String(raw).trim();
-      // Formato Date(YYYY,M,D) de gviz
       const gvizMatch = str.match(/^Date\((\d+),(\d+),(\d+)/);
       if (gvizMatch) {
-        const y = parseInt(gvizMatch[1], 10);
-        const m = parseInt(gvizMatch[2], 10);
-        const d = parseInt(gvizMatch[3], 10);
-        return new Date(y, m, d);
+        return new Date(parseInt(gvizMatch[1], 10), parseInt(gvizMatch[2], 10), parseInt(gvizMatch[3], 10));
       }
 
-      // Formato DD/MM/YYYY
       const parts = str.split('/');
       if (parts.length === 3) {
-        const d = parseInt(parts[0], 10);
-        const m = parseInt(parts[1], 10) - 1;
-        const y = parseInt(parts[2], 10);
-        return new Date(y, m, d);
+        return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
       }
       return null;
     }
@@ -523,7 +555,6 @@
           throw new Error('No se encontraron filas en la hoja.');
         }
 
-        // Mapeo exacto de columnas A (0) a S (18) según tus capturas
         rawRows = data.table.rows.map(r => {
           const c = r.c || [];
           const getVal = (idx) => (c[idx] && c[idx].v !== null && c[idx].v !== undefined) ? String(c[idx].v).trim() : '';
@@ -568,16 +599,22 @@
       } catch (err) {
         loader.style.display = 'none';
         errorBox.style.display = 'block';
-        errorBox.innerHTML = `<strong>Error al cargar Google Sheets:</strong> ${err.message}.<br>Asegúrate de que la hoja tenga permisos de lectura ("Cualquier persona con el enlace puede ver").`;
+        errorBox.innerHTML = `<strong>Error al cargar Google Sheets:</strong> ${err.message}.<br>Verifica que la hoja tenga permisos de lectura ("Cualquier persona con el enlace puede ver").`;
       }
     }
 
     function populateFilterOptions() {
-      const fillSelect = (id, values, defaultLabel) => {
+      const fillSelect = (id, values, defaultLabel, customSort = null) => {
         const sel = document.getElementById(id);
         const current = sel.value;
         sel.innerHTML = `<option value="ALL">${defaultLabel}</option>`;
-        [...new Set(values)].filter(Boolean).sort().forEach(v => {
+        const unique = [...new Set(values)].filter(Boolean);
+        if (customSort) {
+          unique.sort(customSort);
+        } else {
+          unique.sort();
+        }
+        unique.forEach(v => {
           const opt = document.createElement('option');
           opt.value = v;
           opt.textContent = v;
@@ -588,8 +625,17 @@
 
       fillSelect('filterLugar', rawRows.map(r => r.lugar), 'Todos los lugares');
       fillSelect('filterAnio', rawRows.map(r => r.anio), 'Todos los años');
-      fillSelect('filterEquipo', rawRows.map(r => r.equipo), 'Todos los equipos');
-      fillSelect('filterCodigo', rawRows.map(r => r.codigo), 'Todas las máquinas');
+      fillSelect('filterEquipo', rawRows.map(r => r.equipo), 'Todos los equipos', compareEquipos);
+
+      // Ordenar códigos según el equipo al que pertenecen
+      const codigoToEquipo = new Map();
+      rawRows.forEach(r => {
+        if (r.codigo && r.equipo) codigoToEquipo.set(r.codigo, r.equipo);
+      });
+      fillSelect('filterCodigo', rawRows.map(r => r.codigo), 'Todas las máquinas', (codA, codB) => {
+        const cmp = compareEquipos(codigoToEquipo.get(codA), codigoToEquipo.get(codB));
+        return cmp !== 0 ? cmp : codA.localeCompare(codB);
+      });
     }
 
     function getFilteredData() {
@@ -616,11 +662,12 @@
       const activeRows = data.filter(r => r.totalHoras > 0);
       const uniqueActiveMachines = new Set(activeRows.map(r => r.codigo)).size;
 
-      // Último estado de mantenimiento por máquina
+      // Último estado de mantenimiento por equipo/máquina
       const latestByMachine = {};
       data.forEach(r => {
-        if (!latestByMachine[r.codigo] || (r.fechaObj && (!latestByMachine[r.codigo].fechaObj || r.fechaObj >= latestByMachine[r.codigo].fechaObj))) {
-          latestByMachine[r.codigo] = r;
+        const key = `${r.equipo}__${r.codigo}`;
+        if (!latestByMachine[key] || (r.fechaObj && (!latestByMachine[key].fechaObj || r.fechaObj >= latestByMachine[key].fechaObj))) {
+          latestByMachine[key] = r;
         }
       });
       const machineStatuses = Object.values(latestByMachine);
@@ -636,8 +683,7 @@
 
       // 2. Renderizar Gráficos
       renderTimeChart(data);
-      renderEquipoChart(data);
-      renderTopMaquinasChart(data);
+      renderEquipoCharts(data);
       renderMttoChart(machineStatuses);
       renderTable(data);
     }
@@ -677,7 +723,6 @@
         .sort((a, b) => a[0].localeCompare(b[0]))
         .map(entry => entry[1]);
 
-      // Si es diario, mostrar los últimos 30 días con datos para mantener legibilidad
       if (currentPeriod === 'daily' && sortedEntries.length > 30) {
         sortedEntries = sortedEntries.slice(-30);
       }
@@ -744,62 +789,49 @@
       });
     }
 
-    function renderEquipoChart(data) {
-      const byEquipo = {};
-      data.forEach(r => {
-        const eq = r.equipo || 'Sin Especificar';
-        byEquipo[eq] = (byEquipo[eq] || 0) + r.totalHoras;
+    // Gráficos de Horas y Combustible ordenados estrictamente por ORDEN_EQUIPOS
+    function renderEquipoCharts(data) {
+      const statsByEquipo = new Map();
+
+      // Inicializar los 17 equipos oficiales en el orden exacto
+      ORDEN_EQUIPOS.forEach(eq => {
+        statsByEquipo.set(eq, { horas: 0, combustible: 0 });
       });
 
-      const sorted = Object.entries(byEquipo)
-        .filter(([, hrs]) => hrs > 0)
-        .sort((a, b) => b[1] - a[1]);
-
-      if (charts.equipo) charts.equipo.destroy();
-      const ctx = document.getElementById('equipoChart').getContext('2d');
-      charts.equipo = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: sorted.map(s => s[0]),
-          datasets: [{
-            data: sorted.map(s => Number(s[1].toFixed(1))),
-            backgroundColor: ['#f59e0b', '#38bdf8', '#10b981', '#a855f7', '#ec4899', '#6366f1', '#14b8a6', '#f97316'],
-            borderWidth: 0
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { position: 'right', labels: { color: '#f8fafc', boxWidth: 14 } }
-          }
+      // Sumar datos reales
+      data.forEach(r => {
+        const eqRaw = r.equipo || 'Sin Especificar';
+        // Buscar coincidencia insensible a mayúsculas con la lista oficial
+        const officialName = ORDEN_EQUIPOS.find(o => o.toLowerCase() === eqRaw.toLowerCase()) || eqRaw;
+        if (!statsByEquipo.has(officialName)) {
+          statsByEquipo.set(officialName, { horas: 0, combustible: 0 });
         }
-      });
-    }
-
-    function renderTopMaquinasChart(data) {
-      const byMaquina = {};
-      data.forEach(r => {
-        const label = `${r.codigo} (${r.equipo})`;
-        byMaquina[label] = (byMaquina[label] || 0) + r.totalHoras;
+        const entry = statsByEquipo.get(officialName);
+        entry.horas += r.totalHoras;
+        entry.combustible += r.combustible;
       });
 
-      const top10 = Object.entries(byMaquina)
-        .filter(([, hrs]) => hrs > 0)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 10);
+      // Mantener los 17 oficiales siempre visibles en orden, más cualquier otro que tenga > 0
+      const orderedEntries = [...statsByEquipo.entries()]
+        .filter(([name, val]) => ORDEN_MAP.has(name.toLowerCase()) || val.horas > 0 || val.combustible > 0)
+        .sort((a, b) => compareEquipos(a[0], b[0]));
 
-      if (charts.topMaquinas) charts.topMaquinas.destroy();
-      const ctx = document.getElementById('topMaquinasChart').getContext('2d');
-      charts.topMaquinas = new Chart(ctx, {
+      const labels = orderedEntries.map(e => e[0]);
+      const horasData = orderedEntries.map(e => Number(e[1].horas.toFixed(1)));
+      const combData = orderedEntries.map(e => Number(e[1].combustible.toFixed(1)));
+
+      // Gráfico 1: Horas por Equipo
+      if (charts.equipo) charts.equipo.destroy();
+      const ctxHoras = document.getElementById('equipoChart').getContext('2d');
+      charts.equipo = new Chart(ctxHoras, {
         type: 'bar',
         data: {
-          labels: top10.map(m => m[0]),
+          labels: labels,
           datasets: [{
-            label: 'Horas Acumuladas',
-            data: top10.map(m => Number(m[1].toFixed(1))),
+            label: 'Total Horas (h)',
+            data: horasData,
             backgroundColor: '#10b981',
-            borderRadius: 6
+            borderRadius: 5
           }]
         },
         options: {
@@ -808,25 +840,65 @@
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
-            x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(51,65,85,0.4)' } },
-            y: { ticks: { color: '#f8fafc', font: { size: 11 } }, grid: { display: false } }
+            x: {
+              title: { display: true, text: 'Horas Acumuladas (h)', color: '#94a3b8' },
+              ticks: { color: '#94a3b8' },
+              grid: { color: 'rgba(51,65,85,0.4)' }
+            },
+            y: {
+              ticks: { color: '#f8fafc', font: { size: 11 }, autoSkip: false },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+
+      // Gráfico 2: Combustible por Equipo
+      if (charts.combEquipo) charts.combEquipo.destroy();
+      const ctxComb = document.getElementById('combustibleEquipoChart').getContext('2d');
+      charts.combEquipo = new Chart(ctxComb, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Combustible (Gal)',
+            data: combData,
+            backgroundColor: '#38bdf8',
+            borderRadius: 5
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: {
+              title: { display: true, text: 'Galones Abastecidos (Gal)', color: '#94a3b8' },
+              ticks: { color: '#94a3b8' },
+              grid: { color: 'rgba(51,65,85,0.4)' }
+            },
+            y: {
+              ticks: { color: '#f8fafc', font: { size: 11 }, autoSkip: false },
+              grid: { display: false }
+            }
           }
         }
       });
     }
 
+    // Gráfico de Mantenimiento ordenado por ORDEN_EQUIPOS
     function renderMttoChart(machineStatuses) {
       const valid = machineStatuses
         .filter(m => m.horasRestantesMtto !== null && !isNaN(m.horasRestantesMtto))
-        .sort((a, b) => a.horasRestantesMtto - b.horasRestantesMtto)
-        .slice(0, 15);
+        .sort((a, b) => compareEquipos(a.equipo, b.equipo));
 
       if (charts.mtto) charts.mtto.destroy();
       const ctx = document.getElementById('mttoChart').getContext('2d');
       charts.mtto = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: valid.map(m => `${m.codigo} - ${m.equipo}`),
+          labels: valid.map(m => `${m.equipo} [${m.codigo}]`),
           datasets: [{
             label: 'Horas Restantes para Mtto',
             data: valid.map(m => Number(m.horasRestantesMtto.toFixed(1))),
@@ -849,7 +921,10 @@
               ticks: { color: '#94a3b8' },
               grid: { color: 'rgba(51,65,85,0.4)' }
             },
-            y: { ticks: { color: '#f8fafc', font: { size: 11 } }, grid: { display: false } }
+            y: {
+              ticks: { color: '#f8fafc', font: { size: 11 }, autoSkip: false },
+              grid: { display: false }
+            }
           }
         }
       });
@@ -857,7 +932,12 @@
 
     function renderTable(data) {
       const tbody = document.getElementById('recentTableBody');
-      const sorted = [...data].sort((a, b) => (b.fechaObj || 0) - (a.fechaObj || 0)).slice(0, 20);
+      // Ordenar primero por fecha más reciente y, dentro de la misma fecha, por el orden oficial de equipos
+      const sorted = [...data].sort((a, b) => {
+        const diffFecha = (b.fechaObj || 0) - (a.fechaObj || 0);
+        if (diffFecha !== 0) return diffFecha;
+        return compareEquipos(a.equipo, b.equipo);
+      }).slice(0, 25);
 
       tbody.innerHTML = sorted.map(r => {
         let mttoBadge = '-';
