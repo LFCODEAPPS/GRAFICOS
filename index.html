@@ -122,7 +122,6 @@
       cursor: wait;
     }
 
-    /* Botones discretos de descarga individual */
     .btn-mini-export {
       background: #f8fafc;
       color: #334155;
@@ -535,7 +534,6 @@
       white-space: nowrap;
     }
 
-    /* Mini barra horizontal dentro de TOTAL HORAS */
     .hours-bar-cell {
       display: flex;
       align-items: center;
@@ -567,7 +565,6 @@
       text-align: right;
     }
 
-    /* Celda HORAS RESTANTES PARA MTTO */
     .td-mtto-normal {
       background-color: var(--mtto-cell-bg);
       color: #0f172a;
@@ -628,7 +625,7 @@
     <div id="loader">Conectando con Google Sheets y procesando registros...</div>
 
     <div id="dashboardContent" style="display: none;">
-      <!-- Filtros: Vista Temporal + Selector Dinámico + Lugar + Selector Múltiple de Equipos -->
+      <!-- Filtros -->
       <div class="controls-panel">
         <div class="control-group">
           <label>Vista Temporal</label>
@@ -650,7 +647,7 @@
         </div>
 
         <div class="control-group">
-          <label>Equipo (Orden Columna H - Múltiple)</label>
+          <label>Equipo (Orden Estricto de la Hoja - Múltiple)</label>
           <div class="multiselect-dropdown" id="equipoMultiselect">
             <button type="button" class="multiselect-btn" onclick="toggleEquipoDropdown(event)">
               <span id="equipoBtnLabel">TODOS LOS EQUIPOS</span>
@@ -668,9 +665,9 @@
         </div>
       </div>
 
-      <!-- Contenedor unificado para exportar Gráfico + Tabla juntos como imagen HD -->
+      <!-- Contenedor unificado para exportar Gráfico + Tabla -->
       <div id="exportContainer">
-        <!-- Gráfico Único -->
+        <!-- Gráfico -->
         <div class="chart-card" id="chartCardBlock">
           <div class="chart-header">
             <div class="chart-header-left" data-html2canvas-ignore="true">
@@ -686,7 +683,7 @@
           </div>
         </div>
 
-        <!-- Tabla Detallada debajo del gráfico -->
+        <!-- Tabla -->
         <div class="table-card" id="tableCardBlock">
           <div class="table-top-banner">
             <div class="table-date-box" id="tableScopeDate">-</div>
@@ -925,7 +922,7 @@
           throw new Error('La hoja no contiene suficientes filas.');
         }
 
-        // Mapear manteniendo estrictamente el orden de las filas del CSV (Google Sheets)
+        // Mapear estrictamente en el orden de las filas del CSV
         rawRows = matrix.slice(1).map((cols, rowIdx) => {
           const getCol = (idx) => cleanSpaces(cols[idx] || '');
           const fechaObj = parseFechaStr(getCol(4));
@@ -1027,7 +1024,7 @@
       );
       const isFirstRender = currentChecked.size === 0;
 
-      // Obtener lista única de equipos conservando estrictamente el orden de aparición original (fila por fila)
+      // Mantener estrictamente el orden de aparición original (fila por fila de la hoja)
       const seen = new Set();
       const allEquiposList = [];
       rawRows.forEach(r => {
@@ -1374,7 +1371,7 @@
       if (charts.main) charts.main.destroy();
       const ctx = document.getElementById('mainTimeChart').getContext('2d');
 
-      // Obtener el orden exacto de aparición en rawRows (las filas tal como vienen del Sheet)
+      // Obtener equipos en el orden estricto de aparicion en rawRows
       const seen = new Set();
       const originalOrderedEquipos = [];
       rawRows.forEach(r => {
@@ -1565,65 +1562,59 @@
       const tbody = document.getElementById('reportTableBody');
       tbody.innerHTML = '';
 
-      // Mantener estrictamente el orden original de las filas (el orden tal como está en el Sheet)
-      const seen = new Set();
-      const originalOrderedEquipos = [];
-      rawRows.forEach(r => {
-        if (r.equipo && !seen.has(r.equipo)) {
-          seen.add(r.equipo);
-          originalOrderedEquipos.push(r.equipo);
+      // ORDEN ESTRICTO: Usamos directamente el orden en que aparecen las filas (rowIdx ascendente)
+      const sortedActiveData = [...activeData].sort((a, b) => a.rowIdx - b.rowIdx);
+      
+      const seenEquiposInOrder = new Set();
+      const orderedRowsData = [];
+
+      sortedActiveData.forEach(r => {
+        if (selectedEquiposArr.includes(r.equipo) && !seenEquiposInOrder.has(r.equipo)) {
+          seenEquiposInOrder.add(r.equipo);
+          
+          const matches = activeData.filter(m => m.equipo.toLowerCase() === r.equipo.toLowerCase());
+          
+          const lugaresUnicos = [...new Set(matches.map(m => m.lugar).filter(l => l && l !== 'SIN DATA'))];
+          const lugarStr = lugaresUnicos.length > 0 ? lugaresUnicos.join(' / ') : matches[0].lugar;
+
+          const operatedWithOp = matches.filter(m => m.totalHoras > 0 && cleanSpaces(m.operador) !== '');
+          const allValidOps = matches.map(m => cleanSpaces(m.operador)).filter(Boolean);
+          const operadorStr = operatedWithOp.length > 0
+            ? cleanSpaces(operatedWithOp[operatedWithOp.length - 1].operador)
+            : (allValidOps.length > 0 ? allValidOps[allValidOps.length - 1] : '-');
+
+          const validHIni = matches.filter(m => m.hInicial !== null);
+          const validHFin = matches.filter(m => m.hFinal !== null);
+          const hInicial = validHIni.length > 0 ? validHIni[0].hInicial : null;
+          const hFinal = validHFin.length > 0 ? validHFin[validHFin.length - 1].hFinal : null;
+
+          const totalHoras = matches.reduce((sum, m) => sum + m.totalHoras, 0);
+          const combustible = matches.reduce((sum, m) => sum + m.combustible, 0);
+
+          const validMtto = matches.filter(m => m.mttoRaw !== '');
+          const lastMtto = validMtto.length > 0 ? validMtto[validMtto.length - 1] : null;
+
+          const validCombRest = matches.filter(m => m.horasRestantesComb !== null);
+          const lastCombRest = validCombRest.length > 0 ? validCombRest[validCombRest.length - 1] : null;
+
+          orderedRowsData.push({
+            lugar: lugarStr,
+            operador: operadorStr,
+            unidad: r.equipo,
+            hInicial,
+            hFinal,
+            totalHoras,
+            mttoRaw: lastMtto ? lastMtto.mttoRaw : '',
+            mttoNum: lastMtto ? lastMtto.horasRestantesMtto : null,
+            combustible,
+            combRestNum: lastCombRest ? lastCombRest.horasRestantesComb : null
+          });
         }
       });
 
-      const orderedEquipos = originalOrderedEquipos.filter(eq => selectedEquiposArr.includes(eq));
+      const maxHoras = Math.max(...orderedRowsData.map(r => r.totalHoras), 0);
 
-      const rowsToRender = orderedEquipos.map(eq => {
-        const matches = activeData
-          .filter(r => r.equipo.toLowerCase() === eq.toLowerCase())
-          .sort((a, b) => a.rowIdx - b.rowIdx); // Respeta el orden secuencial por índice de fila original
-
-        if (matches.length === 0) return null;
-
-        const lugaresUnicos = [...new Set(matches.map(m => m.lugar).filter(l => l && l !== 'SIN DATA'))];
-        const lugarStr = lugaresUnicos.length > 0 ? lugaresUnicos.join(' / ') : matches[0].lugar;
-
-        const operatedWithOp = matches.filter(m => m.totalHoras > 0 && cleanSpaces(m.operador) !== '');
-        const allValidOps = matches.map(m => cleanSpaces(m.operador)).filter(Boolean);
-        const operadorStr = operatedWithOp.length > 0
-          ? cleanSpaces(operatedWithOp[operatedWithOp.length - 1].operador)
-          : (allValidOps.length > 0 ? allValidOps[allValidOps.length - 1] : '-');
-
-        const validHIni = matches.filter(m => m.hInicial !== null);
-        const validHFin = matches.filter(m => m.hFinal !== null);
-        const hInicial = validHIni.length > 0 ? validHIni[0].hInicial : null;
-        const hFinal = validHFin.length > 0 ? validHFin[validHFin.length - 1].hFinal : null;
-
-        const totalHoras = matches.reduce((sum, m) => sum + m.totalHoras, 0);
-        const combustible = matches.reduce((sum, m) => sum + m.combustible, 0);
-
-        const validMtto = matches.filter(m => m.mttoRaw !== '');
-        const lastMtto = validMtto.length > 0 ? validMtto[validMtto.length - 1] : null;
-
-        const validCombRest = matches.filter(m => m.horasRestantesComb !== null);
-        const lastCombRest = validCombRest.length > 0 ? validCombRest[validCombRest.length - 1] : null;
-
-        return {
-          lugar: lugarStr,
-          operador: operadorStr,
-          unidad: eq,
-          hInicial,
-          hFinal,
-          totalHoras,
-          mttoRaw: lastMtto ? lastMtto.mttoRaw : '',
-          mttoNum: lastMtto ? lastMtto.horasRestantesMtto : null,
-          combustible,
-          combRestNum: lastCombRest ? lastCombRest.horasRestantesComb : null
-        };
-      }).filter(Boolean);
-
-      const maxHoras = Math.max(...rowsToRender.map(r => r.totalHoras), 0);
-
-      rowsToRender.forEach(item => {
+      orderedRowsData.forEach(item => {
         const tr = document.createElement('tr');
 
         const tdLugar = document.createElement('td');
