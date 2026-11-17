@@ -170,10 +170,10 @@
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
     }
 
-    /* KPI Cards */
+    /* KPI Cards (3 columnas principales) */
     .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 16px;
       margin-bottom: 24px;
     }
@@ -256,7 +256,7 @@
 
     .chart-wrapper {
       position: relative;
-      height: 540px;
+      height: 550px;
       width: 100%;
     }
 
@@ -321,7 +321,7 @@
         </div>
       </div>
 
-      <!-- KPIs -->
+      <!-- KPIs (3 indicadores principales) -->
       <div class="kpi-grid">
         <div class="kpi-card">
           <div class="label" id="kpiHorasLabel">Total Horas Trabajadas</div>
@@ -334,10 +334,6 @@
         <div class="kpi-card">
           <div class="label">Equipos Activos (con horas &gt; 0)</div>
           <div class="value" id="kpiEquipos">0</div>
-        </div>
-        <div class="kpi-card">
-          <div class="label">Alertas Mantenimiento (&lt; 50h)</div>
-          <div class="value" id="kpiAlertasMtto">0</div>
         </div>
       </div>
 
@@ -359,7 +355,6 @@
     const GID = '1193959640';
     const CSV_EXPORT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
 
-    // Paletas distintas por vista temporal (con múltiples colores contrastantes para el modo bandera por Lugar)
     const PERIOD_THEMES = {
       daily: {
         title: 'RESUMEN DIARIO DE MAQUINARIA HORAS Y COMBUSTIBLE',
@@ -611,14 +606,13 @@
         }
 
         // A(0):LUGAR, B(1):AÑO, C(2):SEM, D(3):MES, E(4):FECHA, F(5):CODIGO, G(6):OPERADOR, H(7):EQUIPO,
-        // I(8):H.INICIAL, J(9):H.FINAL, K(10):TOTAL, L(11):HORAS RESTANTES MTTO, M(12):COMBUSTIBLE ABASTECIDO
+        // I(8):H.INICIAL, J(9):H.FINAL, K(10):TOTAL, L(11):MTTO, M(12):COMBUSTIBLE ABASTECIDO
         rawRows = matrix.slice(1).map(cols => {
           const getCol = (idx) => cleanSpaces(cols[idx] || '');
           const fechaObj = parseFechaStr(getCol(4));
           const anio = getCol(1) || (fechaObj ? String(fechaObj.getFullYear()) : '');
-          const sem = getCol(2); // Columna C
-          const mes = getCol(3); // Columna D
-          const mttoRaw = getCol(11);
+          const sem = getCol(2);
+          const mes = getCol(3);
 
           return {
             lugar: getCol(0) || 'SIN DATA',
@@ -631,9 +625,8 @@
             codigo: getCol(5),
             operador: getCol(6),
             equipo: normalizeEquipoName(getCol(7)),
-            totalHoras: parseNum(getCol(10)),                     // Columna K
-            horasRestantesMtto: mttoRaw !== '' ? parseNum(mttoRaw) : null, // Columna L
-            combustible: parseNum(getCol(12))                     // Columna M
+            totalHoras: parseNum(getCol(10)), // Columna K
+            combustible: parseNum(getCol(12)) // Columna M
           };
         }).filter(row => row.codigo && row.codigo.toUpperCase() !== 'CODIGO');
 
@@ -677,7 +670,6 @@
       fillSelect('filterEquipo', [...ORDEN_EQUIPOS, ...rawRows.map(r => r.equipo)], 'Todos los equipos', compareEquipos);
     }
 
-    // Cambia dinámicamente el selector entre FECHA (Diario), SEMANA (Col. C) y MES (Col. D)
     function populateTemporalSelector(preserveSelection = false) {
       const theme = PERIOD_THEMES[currentPeriod];
       document.getElementById('filterTemporalLabel').textContent = theme.selectorLabel;
@@ -812,45 +804,23 @@
       document.getElementById('mainChartTitle').textContent = theme.title;
       document.getElementById('activeScopeBadge').textContent = scopeLabel || '-';
 
-      // KPIs
+      // KPIs (3 principales)
       const totalHoras = activeData.reduce((acc, r) => acc + r.totalHoras, 0);
       const totalComb = activeData.reduce((acc, r) => acc + r.combustible, 0);
       const activeRows = activeData.filter(r => r.totalHoras > 0);
       const uniqueActiveMachines = new Set(activeRows.map(r => r.codigo)).size;
 
-      const latestByMachine = {};
-      baseFiltered.forEach(r => {
-        const key = `${r.equipo}__${r.codigo}`;
-        if (!latestByMachine[key] || (r.fechaObj && (!latestByMachine[key].fechaObj || r.fechaObj >= latestByMachine[key].fechaObj))) {
-          latestByMachine[key] = r;
-        }
-      });
-      const machineStatuses = Object.values(latestByMachine);
-      const alertasMtto = machineStatuses.filter(m => m.horasRestantesMtto !== null && m.horasRestantesMtto <= 50).length;
-
       document.getElementById('kpiHoras').textContent = `${totalHoras.toLocaleString('es-PE', { maximumFractionDigits: 1 })} h`;
       document.getElementById('kpiCombustible').textContent = `${totalComb.toLocaleString('es-PE', { maximumFractionDigits: 1 })} Gal`;
       document.getElementById('kpiEquipos').textContent = uniqueActiveMachines;
-      document.getElementById('kpiAlertasMtto').textContent = alertasMtto;
 
       renderMainChart(activeData, theme, selectedEquipo);
     }
 
-    // Ajusta texto para que quepa limpio dentro de cada franja de la barra
-    function fitTextToWidth(ctx, text, maxWidth) {
-      if (maxWidth <= 8) return '';
-      if (ctx.measureText(text).width <= maxWidth) return text;
-      let trimmed = text;
-      while (trimmed.length > 1 && ctx.measureText(trimmed + '…').width > maxWidth) {
-        trimmed = trimmed.slice(0, -1);
-      }
-      return trimmed.length > 1 ? trimmed + '…' : '';
-    }
-
     // Dibuja píldoras redondeadas de alta visibilidad para las etiquetas de datos
-    function drawPillBadge(ctx, text, centerX, centerY, bgColor, textColor, borderColor = null) {
+    function drawPillBadge(ctx, text, centerX, centerY, bgColor, textColor, borderColor = '#ffffff') {
       ctx.save();
-      ctx.font = '800 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.font = '800 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       const padX = 7;
       const height = 20;
       const textWidth = ctx.measureText(text).width;
@@ -887,24 +857,23 @@
       ctx.restore();
     }
 
-    // Plugin que dibuja:
-    // 1. Dentro de cada barra/franja ("modo bandera"): el LUGAR (Columna A) y sus HORAS
-    // 2. Arriba de cada barra: etiqueta visible del TOTAL DE HORAS
-    // 3. Sobre la línea punteada: etiqueta visible del COMBUSTIBLE (Gal) sin superponerse
+    // Plugin que:
+    // 1. No escribe nombres de lugares dentro de las barras (ya están en la leyenda inferior).
+    //    Solo muestra las horas por tramo si la barra tiene 2 o más lugares (modo bandera).
+    // 2. Garantiza separación vertical estricta entre la etiqueta de Horas (h) y Combustible (Gal) para que nunca se superpongan.
     const flagAndLabelsPlugin = {
       id: 'flagAndLabelsPlugin',
       afterDatasetsDraw(chart) {
-        const { ctx, chartArea } = chart;
+        const { ctx } = chart;
         const theme = PERIOD_THEMES[currentPeriod];
         const numCategories = chart.data.labels.length;
 
-        const barTopPositions = new Array(numCategories).fill(null);
-        const barTotals = new Array(numCategories).fill(0);
+        const barBadgeYMap = new Array(numCategories).fill(null);
 
-        // 1. Recorrer las barras apiladas por Lugar ("modo bandera")
         for (let i = 0; i < numCategories; i++) {
           let topY = Infinity;
           let totalH = 0;
+          const activeSegments = [];
 
           chart.data.datasets.forEach((dataset, dsIndex) => {
             if (dataset.type === 'line') return;
@@ -919,56 +888,43 @@
 
             totalH += val;
             if (el.y < topY) topY = el.y;
-
-            const segHeight = Math.abs(el.base - el.y);
-            const segCenterY = (el.base + el.y) / 2;
-            const barWidth = el.width || 36;
-            const lugarName = dataset.label || '';
-            const horasStr = `${Number.isInteger(val) ? val : val.toFixed(1)}h`;
-
-            ctx.save();
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.lineJoin = 'round';
-            ctx.strokeStyle = 'rgba(15, 23, 42, 0.88)';
-            ctx.lineWidth = 3.2;
-            ctx.fillStyle = '#ffffff';
-
-            if (segHeight >= 30) {
-              // Espacio amplio: mostrar LUGAR arriba y HORAS abajo dentro de la franja
-              ctx.font = '800 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-              const fittedLugar = fitTextToWidth(ctx, lugarName, barWidth - 6);
-              if (fittedLugar) {
-                ctx.strokeText(fittedLugar, el.x, segCenterY - 6.5);
-                ctx.fillText(fittedLugar, el.x, segCenterY - 6.5);
-              }
-              ctx.font = '700 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-              ctx.strokeText(horasStr, el.x, segCenterY + 6.5);
-              ctx.fillText(horasStr, el.x, segCenterY + 6.5);
-            } else if (segHeight >= 15) {
-              // Espacio compacto: mostrar "LUGAR 4.5h" en una línea dentro de la franja
-              ctx.font = '800 9.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-              const compactText = fitTextToWidth(ctx, `${lugarName} ${horasStr}`, barWidth - 4);
-              if (compactText) {
-                ctx.strokeText(compactText, el.x, segCenterY);
-                ctx.fillText(compactText, el.x, segCenterY);
-              }
-            }
-            ctx.restore();
+            activeSegments.push({ val, el });
           });
 
+          // Si trabajó en 2 o más lugares (modo bandera), mostrar solo las horas de cada franja dentro de la barra (sin nombre de lugar)
+          if (activeSegments.length > 1) {
+            activeSegments.forEach(({ val, el }) => {
+              const segHeight = Math.abs(el.base - el.y);
+              if (segHeight >= 15) {
+                const segCenterY = (el.base + el.y) / 2;
+                const horasStr = `${Number.isInteger(val) ? val : val.toFixed(1)}h`;
+                ctx.save();
+                ctx.font = '800 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = 'rgba(15, 23, 42, 0.88)';
+                ctx.lineWidth = 3;
+                ctx.fillStyle = '#ffffff';
+                ctx.strokeText(horasStr, el.x, segCenterY);
+                ctx.fillText(horasStr, el.x, segCenterY);
+                ctx.restore();
+              }
+            });
+          }
+
+          // Píldora del total de horas encima de la barra
           if (totalH > 0 && topY < Infinity) {
-            barTotals[i] = totalH;
             const xPos = chart.scales.x.getPixelForValue(i);
-            const badgeY = Math.max(chartArea.top + 12, topY - 14);
-            barTopPositions[i] = { x: xPos, y: badgeY };
+            const barBadgeY = Math.max(38, topY - 14);
+            barBadgeYMap[i] = barBadgeY;
 
             const totalStr = `${Number.isInteger(totalH) ? totalH : totalH.toFixed(1)} h`;
-            drawPillBadge(ctx, totalStr, xPos, badgeY, '#0f172a', '#ffffff', '#ffffff');
+            drawPillBadge(ctx, totalStr, xPos, barBadgeY, '#0f172a', '#ffffff', '#ffffff');
           }
         }
 
-        // 2. Dibujar etiquetas visibles de Combustible (Gal) sobre la línea punteada
+        // Píldora de Combustible (Gal) sobre la línea punteada con detección estricta de colisión
         chart.data.datasets.forEach((dataset, dsIndex) => {
           if (dataset.type !== 'line') return;
           const meta = chart.getDatasetMeta(dsIndex);
@@ -979,14 +935,13 @@
             if (val <= 0) return;
 
             const fuelStr = `${Number.isInteger(val) ? val : val.toFixed(1)} Gal`;
-            let fuelY = el.y - 16;
+            const barBadgeY = barBadgeYMap[i];
+            let fuelY = Math.max(13, el.y - 16);
 
-            // Evitar colisión con la píldora de horas totales si están muy cerca
-            const barBadge = barTopPositions[i];
-            if (barBadge && Math.abs(fuelY - barBadge.y) < 24) {
-              fuelY = Math.max(chartArea.top + 12, barBadge.y - 24);
-            } else {
-              fuelY = Math.max(chartArea.top + 12, fuelY);
+            // Si existe etiqueta de horas en la misma columna y la distancia vertical es menor a 25px,
+            // apilar la etiqueta de combustible limpia y completamente por encima de la etiqueta de horas
+            if (barBadgeY !== null && Math.abs(fuelY - barBadgeY) < 25) {
+              fuelY = Math.max(13, barBadgeY - 25);
             }
 
             drawPillBadge(ctx, fuelStr, el.x, fuelY, theme.lineColor, '#ffffff', '#ffffff');
@@ -999,7 +954,6 @@
       if (charts.main) charts.main.destroy();
       const ctx = document.getElementById('mainTimeChart').getContext('2d');
 
-      // 1. Definir lista de máquinas en orden oficial
       const targetEquipos = selectedEquipo === 'ALL'
         ? [...ORDEN_EQUIPOS]
         : [selectedEquipo];
@@ -1009,7 +963,7 @@
 
       const orderedEquipos = [...targetEquipos, ...extraEquipos].sort(compareEquipos);
 
-      // 2. Identificar los lugares activos (Columna A) para pintar barras en "modo bandera"
+      // Lugares activos (Columna A) para leyenda y barras modo bandera
       const activeLugaresSet = new Set();
       data.forEach(r => {
         if (r.totalHoras > 0) activeLugaresSet.add(r.lugar);
@@ -1019,7 +973,6 @@
         ? allLugares.filter(l => activeLugaresSet.has(l))
         : (allLugares.length > 0 ? [allLugares[0]] : ['SIN DATA']);
 
-      // 3. Agrupar horas por [Equipo][Lugar] y combustible total por [Equipo]
       const hoursByEquipoLugar = new Map();
       const combByEquipo = new Map();
 
@@ -1039,7 +992,6 @@
         combByEquipo.set(eq, (combByEquipo.get(eq) || 0) + r.combustible);
       });
 
-      // 4. Construir datasets: 1 dataset apilado por cada Lugar (modo bandera) + 1 dataset línea para Combustible
       const barDatasets = lugaresList.map((lugar, idx) => {
         const color = theme.flagColors[idx % theme.flagColors.length];
         return {
@@ -1087,7 +1039,7 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          layout: { padding: { top: 38, bottom: 4 } },
+          layout: { padding: { top: 56, bottom: 4 } },
           interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: {
@@ -1139,7 +1091,7 @@
               position: 'left',
               stacked: true,
               beginAtZero: true,
-              grace: '16%',
+              grace: '20%',
               title: { display: true, text: 'Horas (h)', color: theme.axisLeftColor, font: { size: 12, weight: '700' } },
               ticks: { color: '#475569', font: { weight: '600' } },
               grid: { color: 'rgba(148, 163, 184, 0.25)' }
@@ -1148,7 +1100,7 @@
               type: 'linear',
               position: 'right',
               beginAtZero: true,
-              grace: '16%',
+              grace: '20%',
               title: { display: true, text: 'Combustible (Gal)', color: theme.lineColor, font: { size: 12, weight: '700' } },
               ticks: { color: '#475569', font: { weight: '600' } },
               grid: { drawOnChartArea: false }
