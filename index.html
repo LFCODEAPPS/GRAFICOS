@@ -990,7 +990,7 @@
       updateEquipoCheckboxesAndLabels();
     }
 
-    function updateEquipoCheckboxesAndLabels() {
+function updateEquipoCheckboxesAndLabels() {
       const selectedTemporal = document.getElementById('filterTemporal').value;
       const selectedLugar = document.getElementById('filterLugar').value;
 
@@ -1022,33 +1022,29 @@
         periodFilteredData.filter(r => r.totalHoras > 0).map(r => r.equipo)
       );
 
+      const wasAllChecked = document.getElementById('selectAllEquipos').checked;
+      const existingChks = document.querySelectorAll('.equipo-chk');
+      const isFirstRender = existingChks.length === 0;
       const currentChecked = new Set(
         [...document.querySelectorAll('.equipo-chk:checked')].map(c => c.value)
       );
-      const isFirstRender = currentChecked.size === 0;
 
-      // Priorizar primero el orden exacto de las filas del período seleccionado, seguido del resto
+      // Incluir ÚNICAMENTE los equipos existentes en la fecha/período y lugar seleccionados
       const seen = new Set();
-      const allEquiposList = [];
+      const availableEquiposList = [];
       periodFilteredData.forEach(r => {
         if (r.equipo && !seen.has(r.equipo)) {
           seen.add(r.equipo);
-          allEquiposList.push(r.equipo);
-        }
-      });
-      rawRows.forEach(r => {
-        if (r.equipo && !seen.has(r.equipo)) {
-          seen.add(r.equipo);
-          allEquiposList.push(r.equipo);
+          availableEquiposList.push(r.equipo);
         }
       });
 
       const container = document.getElementById('equipoCheckboxList');
       container.innerHTML = '';
 
-      allEquiposList.forEach(eq => {
+      availableEquiposList.forEach(eq => {
         const hasData = activeEquiposInPeriod.has(eq);
-        const isChecked = isFirstRender ? true : currentChecked.has(eq);
+        const isChecked = (isFirstRender || wasAllChecked) ? true : currentChecked.has(eq);
 
         const lbl = document.createElement('label');
         lbl.className = 'multiselect-item';
@@ -1062,7 +1058,7 @@
       });
 
       const allChks = document.querySelectorAll('.equipo-chk');
-      const allChecked = [...allChks].every(c => c.checked);
+      const allChecked = allChks.length > 0 && [...allChks].every(c => c.checked);
       document.getElementById('selectAllEquipos').checked = allChecked;
       updateEquipoButtonLabel();
     }
