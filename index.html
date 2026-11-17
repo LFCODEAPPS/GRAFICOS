@@ -653,7 +653,7 @@
           <label>Equipo (Orden de Flota - Múltiple)</label>
           <div class="multiselect-dropdown" id="equipoMultiselect">
             <button type="button" class="multiselect-btn" onclick="toggleEquipoDropdown(event)">
-              <span id="equipoBtnLabel">Todos los equipos</span>
+              <span id="equipoBtnLabel">TODOS LOS EQUIPOS</span>
               <span>▼</span>
             </button>
             <div class="multiselect-content" id="equipoDropdownContent">
@@ -731,14 +731,8 @@
         tableTitle: 'REPORTE DIARIO MAQUINARIA (HORAS, COMBUSTIBLE Y HORAS RESTANTES PARA MTTO)',
         selectorLabel: 'FECHA',
         flagColors: [
-          '#f59e0b', // Ámbar
-          '#0d9488', // Verde azulado
-          '#ea580c', // Naranja intenso
-          '#2563eb', // Azul real
-          '#7c3aed', // Violeta
-          '#65a30d', // Verde lima
-          '#e11d48', // Carmesí
-          '#0891b2'  // Cian
+          '#f59e0b', '#0d9488', '#ea580c', '#2563eb',
+          '#7c3aed', '#65a30d', '#e11d48', '#0891b2'
         ],
         axisLeftColor: '#d97706',
         lineColor: '#0284c7',
@@ -757,14 +751,8 @@
         tableTitle: 'REPORTE SEMANAL MAQUINARIA (HORAS, COMBUSTIBLE Y HORAS RESTANTES PARA MTTO)',
         selectorLabel: 'SEMANA',
         flagColors: [
-          '#10b981', // Esmeralda
-          '#f59e0b', // Ámbar
-          '#4f46e5', // Índigo
-          '#e11d48', // Carmesí
-          '#06b6d4', // Turquesa
-          '#f97316', // Naranja
-          '#8b5cf6', // Púrpura
-          '#14b8a6'  // Teal
+          '#10b981', '#f59e0b', '#4f46e5', '#e11d48',
+          '#06b6d4', '#f97316', '#8b5cf6', '#14b8a6'
         ],
         axisLeftColor: '#059669',
         lineColor: '#6366f1',
@@ -783,14 +771,8 @@
         tableTitle: 'REPORTE MENSUAL MAQUINARIA (HORAS, COMBUSTIBLE Y HORAS RESTANTES PARA MTTO)',
         selectorLabel: 'MES',
         flagColors: [
-          '#2563eb', // Azul cobalto
-          '#f59e0b', // Ámbar dorado
-          '#059669', // Verde bosque
-          '#e11d48', // Rojo carmesí
-          '#7c3aed', // Violeta
-          '#ea580c', // Naranja
-          '#0891b2', // Cian
-          '#c026d3'  // Fucsia
+          '#2563eb', '#f59e0b', '#059669', '#e11d48',
+          '#7c3aed', '#ea580c', '#0891b2', '#c026d3'
         ],
         axisLeftColor: '#1d4ed8',
         lineColor: '#e11d48',
@@ -812,7 +794,8 @@
       'septiembre': 9, 'setiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
     };
 
-    const ORDEN_EQUIPOS = [
+    // Orden lógico preferente de la flota para ordenamiento visual
+    const ORDEN_PREFERENTE = [
       'Excavadora 1 (336 D2L)',
       'Excavadora 2 (320)',
       'Excavadora 3 (336 DL)',
@@ -829,7 +812,7 @@
       'Mini Cargador (Manitou)',
       'Rodillo Rolas',
       'Rodillo Neumático 3',
-      'Pavimentadora 3'
+      'Pavimentadora 2'
     ];
 
     function cleanSpaces(str) {
@@ -840,24 +823,18 @@
     }
 
     const ORDEN_MAP = new Map(
-      ORDEN_EQUIPOS.map((nombre, index) => [cleanSpaces(nombre).toLowerCase(), index])
+      ORDEN_PREFERENTE.map((nombre, index) => [cleanSpaces(nombre).toLowerCase(), index])
     );
 
-    function normalizeEquipoName(rawName) {
+    // FUNCIÓN CORREGIDA: Toma exactamente el nombre de la Columna H (con su formato limpio),
+    // sin forzar ni reemplazar nombres por otros.
+    function getExactEquipoName(rawName) {
       const clean = cleanSpaces(rawName);
-      if (!clean) return 'Sin Especificar';
-      const lower = clean.toLowerCase();
-
-      if (lower.includes('cargador f') && lower.includes('cat')) return 'Cargador F. (CAT)';
-      if (lower.includes('cargador f') && lower.includes('komatsu')) return 'Cargador F. (KOMATSU)';
-      if (lower.includes('pavimentadora')) return 'Pavimentadora 3';
-
-      const found = ORDEN_EQUIPOS.find(o => cleanSpaces(o).toLowerCase() === lower);
-      return found || clean;
+      return clean ? clean : 'Sin Especificar';
     }
 
     function getEquipoOrderIndex(equipoName) {
-      const key = cleanSpaces(normalizeEquipoName(equipoName)).toLowerCase();
+      const key = cleanSpaces(equipoName).toLowerCase();
       return ORDEN_MAP.has(key) ? ORDEN_MAP.get(key) : 9999;
     }
 
@@ -1009,7 +986,7 @@
             fechaStr: formatDateES(fechaObj),
             codigo: getCol(5),
             operador: getCol(6),
-            equipo: normalizeEquipoName(getCol(7)),
+            equipo: getExactEquipoName(getCol(7)), // Columna H exacta
             hIniRaw: hIniRaw,
             hInicial: hIniRaw !== '' ? parseNum(hIniRaw) : null,
             hFinRaw: hFinRaw,
@@ -1035,12 +1012,11 @@
       } catch (err) {
         loader.style.display = 'none';
         errorBox.style.display = 'block';
-        errorBox.innerHTML = `<strong>Error al cargar Google Sheets:</strong> ${err.message}.<br>Verifica que la hoja tenga permisos de lectura ("Cualquier persona con el enlace puede ver").`;
+        errorBox.innerHTML = `<strong>Error al cargar Google Sheets:</strong> ${err.message}.<br>Verifica que la hoja tenga permisos de lectura.`;
       }
     }
 
     function populateStaticFilters() {
-      // Lugar
       const selLugar = document.getElementById('filterLugar');
       const currentLugar = selLugar.value;
       selLugar.innerHTML = '<option value="ALL">Todos los lugares</option>';
@@ -1089,11 +1065,13 @@
       );
       const isFirstRender = currentChecked.size === 0;
 
-      // Usar estrictamente la lista oficial de la flota (ORDEN_EQUIPOS) para mostrar solo los 17 equipos principales
+      // Extraer dinámicamente todos los equipos únicos de la columna H en todo el archivo
+      const allEquiposList = [...new Set(rawRows.map(r => r.equipo))].filter(Boolean).sort(compareEquipos);
+
       const container = document.getElementById('equipoCheckboxList');
       container.innerHTML = '';
 
-      ORDEN_EQUIPOS.forEach(eq => {
+      allEquiposList.forEach(eq => {
         const hasData = activeEquiposInPeriod.has(eq);
         const isChecked = isFirstRender ? true : currentChecked.has(eq);
 
@@ -1427,9 +1405,9 @@
       if (charts.main) charts.main.destroy();
       const ctx = document.getElementById('mainTimeChart').getContext('2d');
 
-      // Filtrar únicamente los equipos seleccionados que además tengan actividad o pertenezcan al período
-      const activeEquiposSet = new Set(activeData.map(r => normalizeEquipoName(r.equipo)));
-      const orderedEquipos = ORDEN_EQUIPOS.filter(eq => selectedEquiposArr.includes(eq) && activeEquiposSet.has(eq));
+      const allUniqueEquipos = [...new Set(rawRows.map(r => r.equipo))].sort(compareEquipos);
+      const activeEquiposSet = new Set(activeData.map(r => r.equipo));
+      const orderedEquipos = allUniqueEquipos.filter(eq => selectedEquiposArr.includes(eq) && activeEquiposSet.has(eq));
 
       const activeLugaresSet = new Set();
       activeData.forEach(r => {
@@ -1449,7 +1427,7 @@
       });
 
       activeData.forEach(r => {
-        const eq = normalizeEquipoName(r.equipo);
+        const eq = r.equipo;
         if (hoursByEquipoLugar.has(eq)) {
           const lugarMap = hoursByEquipoLugar.get(eq);
           lugarMap.set(r.lugar, (lugarMap.get(r.lugar) || 0) + r.totalHoras);
@@ -1609,11 +1587,12 @@
       const tbody = document.getElementById('reportTableBody');
       tbody.innerHTML = '';
 
-      const orderedEquipos = ORDEN_EQUIPOS.filter(eq => selectedEquiposArr.includes(eq));
+      const allUniqueEquipos = [...new Set(rawRows.map(r => r.equipo))].sort(compareEquipos);
+      const orderedEquipos = allUniqueEquipos.filter(eq => selectedEquiposArr.includes(eq));
 
       const rowsToRender = orderedEquipos.map(eq => {
         const matches = activeData
-          .filter(r => normalizeEquipoName(r.equipo).toLowerCase() === eq.toLowerCase())
+          .filter(r => r.equipo.toLowerCase() === eq.toLowerCase())
           .sort((a, b) => {
             const tA = a.fechaObj ? a.fechaObj.getTime() : 0;
             const tB = b.fechaObj ? b.fechaObj.getTime() : 0;
