@@ -244,20 +244,20 @@
       overflow: hidden;
     }
 
-    /* Título de tabla un poco más alto */
+    /* Banner superior más alto y con mayor presencia */
     .table-top-banner {
       display: flex;
       align-items: stretch;
       background: #1e293b;
       color: #ffffff;
       border-bottom: 2px solid #0f172a;
-      min-height: 64px;
+      min-height: 68px;
     }
 
     .table-date-box {
       background: #0f172a;
       color: #ffffff;
-      font-size: 1.38rem;
+      font-size: 1.35rem;
       font-weight: 800;
       padding: 20px 30px;
       display: flex;
@@ -275,7 +275,7 @@
       justify-content: center;
       text-align: center;
       padding: 20px 24px;
-      font-size: 1.16rem;
+      font-size: 1.18rem;
       font-weight: 800;
       letter-spacing: 0.04em;
       text-transform: uppercase;
@@ -293,6 +293,7 @@
       }
       .table-banner-title {
         padding: 14px 16px;
+        font-size: 1rem;
       }
     }
 
@@ -304,11 +305,11 @@
     table.report-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.88rem;
-      min-width: 980px;
+      font-size: 0.87rem;
+      min-width: 1120px;
     }
 
-    /* Encabezados de columnas un poco menos altos */
+    /* Encabezados de columna más compactos (menos altos) */
     table.report-table thead th {
       background: var(--accent);
       color: var(--accent-text);
@@ -319,7 +320,7 @@
       padding: 7px 10px;
       text-align: center;
       border: 1px solid rgba(15, 23, 42, 0.14);
-      line-height: 1.15;
+      line-height: 1.18;
       transition: background 0.2s, color 0.2s;
     }
 
@@ -329,7 +330,7 @@
     }
 
     table.report-table tbody td {
-      padding: 9px 12px;
+      padding: 9px 11px;
       border: 1px solid #e2e8f0;
       color: #0f172a;
       vertical-align: middle;
@@ -343,6 +344,14 @@
       font-weight: 700;
       font-size: 0.8rem;
       color: #334155;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    .td-operador {
+      font-weight: 600;
+      font-size: 0.82rem;
+      color: #1e293b;
       text-align: left;
       white-space: nowrap;
     }
@@ -502,6 +511,7 @@
             <thead>
               <tr>
                 <th>LUGAR</th>
+                <th>OPERADOR</th>
                 <th>UNIDAD</th>
                 <th>H. INICIAL</th>
                 <th>H. FINAL</th>
@@ -785,6 +795,10 @@
           throw new Error('La hoja no contiene suficientes filas.');
         }
 
+        // Columnas Google Sheets:
+        // A(0):LUGAR, B(1):AÑO, C(2):SEM, D(3):MES, E(4):FECHA, F(5):CODIGO, G(6):OPERADOR, H(7):UNIDAD/EQUIPO,
+        // I(8):H.INICIAL, J(9):H.FINAL, K(10):TOTAL HORAS, L(11):HORAS RESTANTES PARA MTTO,
+        // M(12):COMBUSTIBLE ABASTECIDO, N(13):GAL/H, O(14):RENDIMIENTO, P(15):HORAS RESTANTES DE COMBUSTIBLE
         rawRows = matrix.slice(1).map((cols, rowIdx) => {
           const getCol = (idx) => cleanSpaces(cols[idx] || '');
           const fechaObj = parseFechaStr(getCol(4));
@@ -806,12 +820,12 @@
             fechaISO: formatDateISO(fechaObj),
             fechaStr: formatDateES(fechaObj),
             codigo: getCol(5),
-            operador: getCol(6),
-            equipo: normalizeEquipoName(getCol(7)),
+            operador: getCol(6),                                                    // Columna G
+            equipo: normalizeEquipoName(getCol(7)),                                 // Columna H
             hIniRaw: hIniRaw,
-            hInicial: hIniRaw !== '' ? parseNum(hIniRaw) : null,
+            hInicial: hIniRaw !== '' ? parseNum(hIniRaw) : null,                    // Columna I
             hFinRaw: hFinRaw,
-            hFinal: hFinRaw !== '' ? parseNum(hFinRaw) : null,
+            hFinal: hFinRaw !== '' ? parseNum(hFinRaw) : null,                      // Columna J
             totalHoras: parseNum(getCol(10)),                                       // Columna K
             mttoRaw: mttoRaw,                                                       // Columna L texto
             horasRestantesMtto: mttoRaw !== '' ? parseNum(mttoRaw) : null,          // Columna L número
@@ -1340,6 +1354,7 @@
         if (matches.length === 0) {
           return {
             lugar: '-',
+            operador: '-',
             unidad: eq,
             hInicial: null,
             hFinal: null,
@@ -1351,17 +1366,25 @@
           };
         }
 
+        // Lugares únicos (Columna A)
         const lugaresUnicos = [...new Set(matches.map(m => m.lugar).filter(l => l && l !== 'SIN DATA'))];
         const lugarStr = lugaresUnicos.length > 0 ? lugaresUnicos.join(' / ') : matches[0].lugar;
 
+        // Operadores únicos (Columna G)
+        const operadoresUnicos = [...new Set(matches.map(m => m.operador).filter(Boolean))];
+        const operadorStr = operadoresUnicos.length > 0 ? operadoresUnicos.join(' / ') : '-';
+
+        // H. Inicial (Columna I) y H. Final (Columna J)
         const validHIni = matches.filter(m => m.hInicial !== null);
         const validHFin = matches.filter(m => m.hFinal !== null);
         const hInicial = validHIni.length > 0 ? validHIni[0].hInicial : null;
         const hFinal = validHFin.length > 0 ? validHFin[validHFin.length - 1].hFinal : null;
 
+        // Total Horas (Columna K) y Combustible Abastecido (Columna M)
         const totalHoras = matches.reduce((sum, m) => sum + m.totalHoras, 0);
         const combustible = matches.reduce((sum, m) => sum + m.combustible, 0);
 
+        // Mantenimiento (Columna L) y Horas Restantes Combustible (Columna P)
         const validMtto = matches.filter(m => m.mttoRaw !== '');
         const lastMtto = validMtto.length > 0 ? validMtto[validMtto.length - 1] : null;
 
@@ -1370,6 +1393,7 @@
 
         return {
           lugar: lugarStr,
+          operador: operadorStr,
           unidad: eq,
           hInicial,
           hFinal,
@@ -1392,25 +1416,31 @@
         tdLugar.textContent = item.lugar;
         tr.appendChild(tdLugar);
 
-        // 2. UNIDAD (Columna H)
+        // 2. OPERADOR (Columna G - antes de UNIDAD)
+        const tdOperador = document.createElement('td');
+        tdOperador.className = 'td-operador';
+        tdOperador.textContent = item.operador;
+        tr.appendChild(tdOperador);
+
+        // 3. UNIDAD (Columna H)
         const tdUnidad = document.createElement('td');
         tdUnidad.className = 'td-unidad';
         tdUnidad.innerHTML = formatUnidadHTML(item.unidad);
         tr.appendChild(tdUnidad);
 
-        // 3. H. INICIAL (Columna I)
+        // 4. H. INICIAL (Columna I)
         const tdHIni = document.createElement('td');
         tdHIni.className = 'td-num';
         tdHIni.textContent = formatHorometro(item.hInicial);
         tr.appendChild(tdHIni);
 
-        // 4. H. FINAL (Columna J)
+        // 5. H. FINAL (Columna J)
         const tdHFin = document.createElement('td');
         tdHFin.className = 'td-num';
         tdHFin.textContent = formatHorometro(item.hFinal);
         tr.appendChild(tdHFin);
 
-        // 5. TOTAL HORAS (Columna K)
+        // 6. TOTAL HORAS (Columna K)
         const tdTotal = document.createElement('td');
         tdTotal.className = 'td-num';
         if (item.totalHoras > 0) {
@@ -1429,7 +1459,7 @@
         }
         tr.appendChild(tdTotal);
 
-        // 6. HORAS RESTANTES PARA MTTO (Columna L - pasados de horas en ROJO)
+        // 7. HORAS RESTANTES PARA MTTO (Columna L)
         const tdMtto = document.createElement('td');
         const rawUpper = item.mttoRaw.toUpperCase();
         const isOverdue = rawUpper.includes('RETRASADO') || (item.mttoNum !== null && item.mttoNum < 0);
@@ -1459,13 +1489,13 @@
         }
         tr.appendChild(tdMtto);
 
-        // 7. COMBUSTIBLE ABASTECIDO (Columna M)
+        // 8. COMBUSTIBLE ABASTECIDO (Columna M)
         const tdComb = document.createElement('td');
         tdComb.className = 'td-comb';
         tdComb.textContent = item.combustible > 0 ? `${item.combustible.toFixed(2)} Gal` : '';
         tr.appendChild(tdComb);
 
-        // 8. HORAS RESTANTES DE COMBUSTIBLE (Columna P)
+        // 9. HORAS RESTANTES DE COMBUSTIBLE (Columna P)
         const tdCombRest = document.createElement('td');
         tdCombRest.className = 'td-num';
         tdCombRest.textContent = item.combRestNum !== null ? item.combRestNum.toFixed(2) : '';
