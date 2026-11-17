@@ -244,20 +244,22 @@
       overflow: hidden;
     }
 
+    /* Título de tabla un poco más alto */
     .table-top-banner {
       display: flex;
       align-items: stretch;
       background: #1e293b;
       color: #ffffff;
       border-bottom: 2px solid #0f172a;
+      min-height: 64px;
     }
 
     .table-date-box {
       background: #0f172a;
       color: #ffffff;
-      font-size: 1.25rem;
+      font-size: 1.38rem;
       font-weight: 800;
-      padding: 14px 28px;
+      padding: 20px 30px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -272,8 +274,8 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      padding: 14px 20px;
-      font-size: 1.05rem;
+      padding: 20px 24px;
+      font-size: 1.16rem;
       font-weight: 800;
       letter-spacing: 0.04em;
       text-transform: uppercase;
@@ -282,11 +284,15 @@
     @media (max-width: 768px) {
       .table-top-banner {
         flex-direction: column;
+        min-height: auto;
       }
       .table-date-box {
         border-right: none;
         border-bottom: 1px solid #334155;
-        padding: 10px 16px;
+        padding: 14px 16px;
+      }
+      .table-banner-title {
+        padding: 14px 16px;
       }
     }
 
@@ -302,17 +308,18 @@
       min-width: 980px;
     }
 
+    /* Encabezados de columnas un poco menos altos */
     table.report-table thead th {
       background: var(--accent);
       color: var(--accent-text);
       font-weight: 800;
       text-transform: uppercase;
-      font-size: 0.78rem;
+      font-size: 0.74rem;
       letter-spacing: 0.03em;
-      padding: 14px 12px;
+      padding: 7px 10px;
       text-align: center;
       border: 1px solid rgba(15, 23, 42, 0.14);
-      line-height: 1.3;
+      line-height: 1.15;
       transition: background 0.2s, color 0.2s;
     }
 
@@ -778,10 +785,6 @@
           throw new Error('La hoja no contiene suficientes filas.');
         }
 
-        // Columnas Google Sheets:
-        // A(0):LUGAR, B(1):AÑO, C(2):SEM, D(3):MES, E(4):FECHA, F(5):CODIGO, G(6):OPERADOR, H(7):UNIDAD/EQUIPO,
-        // I(8):H.INICIAL, J(9):H.FINAL, K(10):TOTAL HORAS, L(11):HORAS RESTANTES PARA MTTO,
-        // M(12):COMBUSTIBLE ABASTECIDO, N(13):GAL/H, O(14):RENDIMIENTO, P(15):HORAS RESTANTES DE COMBUSTIBLE
         rawRows = matrix.slice(1).map((cols, rowIdx) => {
           const getCol = (idx) => cleanSpaces(cols[idx] || '');
           const fechaObj = parseFechaStr(getCol(4));
@@ -1298,18 +1301,15 @@
       });
     }
 
-    // Formatea el nombre de la unidad poniendo el modelo entre paréntesis en negrita
     function formatUnidadHTML(name) {
       return String(name).replace(/\(([^)]+)\)/g, '<strong>($1)</strong>');
     }
 
-    // Formatea horómetros con máximo 1 decimal limpio (ej. 9316.3 o 6027)
     function formatHorometro(val) {
       if (val === null || val === undefined || isNaN(val)) return '-';
       return Number.isInteger(val) ? String(val) : val.toFixed(1);
     }
 
-    // Renderiza la tabla detallada debajo del gráfico respetando los mismos filtros
     function renderReportTable(activeData, selectedEquipo, selectedLugar) {
       const tbody = document.getElementById('reportTableBody');
       tbody.innerHTML = '';
@@ -1323,13 +1323,11 @@
 
       let orderedEquipos = [...targetEquipos, ...extraEquipos].sort(compareEquipos);
 
-      // Si se filtró por un lugar específico, mostrar los equipos presentes en ese lugar
       if (selectedLugar !== 'ALL') {
         const equiposEnLugar = new Set(activeData.map(r => normalizeEquipoName(r.equipo)));
         orderedEquipos = orderedEquipos.filter(eq => equiposEnLugar.has(eq));
       }
 
-      // Construir filas consolidadas por máquina
       const rowsToRender = orderedEquipos.map(eq => {
         const matches = activeData
           .filter(r => normalizeEquipoName(r.equipo).toLowerCase() === eq.toLowerCase())
@@ -1353,21 +1351,17 @@
           };
         }
 
-        // Lugares únicos donde trabajó la máquina en el periodo filtrado
         const lugaresUnicos = [...new Set(matches.map(m => m.lugar).filter(l => l && l !== 'SIN DATA'))];
         const lugarStr = lugaresUnicos.length > 0 ? lugaresUnicos.join(' / ') : matches[0].lugar;
 
-        // H. Inicial (primer registro del periodo) y H. Final (último registro del periodo)
         const validHIni = matches.filter(m => m.hInicial !== null);
         const validHFin = matches.filter(m => m.hFinal !== null);
         const hInicial = validHIni.length > 0 ? validHIni[0].hInicial : null;
         const hFinal = validHFin.length > 0 ? validHFin[validHFin.length - 1].hFinal : null;
 
-        // Total Horas (Columna K) y Combustible Abastecido (Columna M) acumulados
         const totalHoras = matches.reduce((sum, m) => sum + m.totalHoras, 0);
         const combustible = matches.reduce((sum, m) => sum + m.combustible, 0);
 
-        // Último estado de Mantenimiento (Columna L) y Horas Restantes de Combustible (Columna P)
         const validMtto = matches.filter(m => m.mttoRaw !== '');
         const lastMtto = validMtto.length > 0 ? validMtto[validMtto.length - 1] : null;
 
@@ -1416,7 +1410,7 @@
         tdHFin.textContent = formatHorometro(item.hFinal);
         tr.appendChild(tdHFin);
 
-        // 5. TOTAL HORAS (Columna K) con mini barra proporcional
+        // 5. TOTAL HORAS (Columna K)
         const tdTotal = document.createElement('td');
         tdTotal.className = 'td-num';
         if (item.totalHoras > 0) {
