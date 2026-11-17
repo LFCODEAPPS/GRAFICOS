@@ -122,7 +122,7 @@
       cursor: wait;
     }
 
-    /* Botones discretos de descarga individual */
+    /* Botões discretos de descarga individual */
     .btn-mini-export {
       background: #f8fafc;
       color: #334155;
@@ -659,7 +659,7 @@
             <div class="multiselect-content" id="equipoDropdownContent">
               <label class="multiselect-item" style="border-bottom: 1px solid #e2e8f0; font-weight: 700; margin-bottom: 4px;">
                 <div class="multiselect-item-left">
-                  <input type="checkbox" id="selectAllEquipos" onchange="toggleSelectAllEquipos(this)"> Todos los equipos
+                  <input type="checkbox" id="selectAllEquipos" onchange="toggleSelectAllEquipos(this)"> TODOS LOS EQUIPOS
                 </div>
               </label>
               <div id="equipoCheckboxList"></div>
@@ -850,7 +850,7 @@
 
       if (lower.includes('cargador f') && lower.includes('cat')) return 'Cargador F. (CAT)';
       if (lower.includes('cargador f') && lower.includes('komatsu')) return 'Cargador F. (KOMATSU)';
-      if (lower === 'pavimentadora 2' || lower === 'pavimentadora 3') return 'Pavimentadora 3';
+      if (lower.includes('pavimentadora')) return 'Pavimentadora 3';
 
       const found = ORDEN_EQUIPOS.find(o => cleanSpaces(o).toLowerCase() === lower);
       return found || clean;
@@ -1056,7 +1056,6 @@
     }
 
     function updateEquipoCheckboxesAndLabels() {
-      // Obtener datos del período actual seleccionado
       const selectedTemporal = document.getElementById('filterTemporal').value;
       const selectedLugar = document.getElementById('filterLugar').value;
 
@@ -1081,22 +1080,20 @@
         periodFilteredData = periodFilteredData.filter(r => r.lugar === selectedLugar);
       }
 
-      // Equipos con actividad en este período
       const activeEquiposInPeriod = new Set(
         periodFilteredData.filter(r => r.totalHoras > 0).map(r => r.equipo)
       );
 
-      // Conservar estados actuales de selección
       const currentChecked = new Set(
         [...document.querySelectorAll('.equipo-chk:checked')].map(c => c.value)
       );
       const isFirstRender = currentChecked.size === 0;
 
-      const allEquiposList = [...new Set([...ORDEN_EQUIPOS, ...rawRows.map(r => r.equipo)])].filter(Boolean).sort(compareEquipos);
+      // Usar estrictamente la lista oficial de la flota (ORDEN_EQUIPOS) para mostrar solo los 17 equipos principales
       const container = document.getElementById('equipoCheckboxList');
       container.innerHTML = '';
 
-      allEquiposList.forEach(eq => {
+      ORDEN_EQUIPOS.forEach(eq => {
         const hasData = activeEquiposInPeriod.has(eq);
         const isChecked = isFirstRender ? true : currentChecked.has(eq);
 
@@ -1156,7 +1153,7 @@
       const lbl = document.getElementById('equipoBtnLabel');
 
       if (checked.length === chks.length || checked.length === 0) {
-        lbl.textContent = 'Todos los equipos';
+        lbl.textContent = 'TODOS LOS EQUIPOS';
       } else if (checked.length === 1) {
         lbl.textContent = checked[0].value;
       } else {
@@ -1262,10 +1259,8 @@
       const selectedLugar = document.getElementById('filterLugar').value;
       const selectedEquiposArr = getSelectedEquipos();
 
-      // Actualizar etiquetas de "Sin datos" en el dropdown según la fecha seleccionada
       updateEquipoCheckboxesAndLabels();
 
-      // 1. Filtrar primero por período temporal (Fecha, Semana o Mes)
       let activeData = [];
       let scopeLabel = '-';
 
@@ -1290,7 +1285,6 @@
         scopeLabel = `${mesCap}${targetAnio ? ' ' + targetAnio : ''}`;
       }
 
-      // 2. Aplicar filtros adicionales de Lugar y Equipos seleccionados
       activeData = activeData.filter(r => {
         if (selectedLugar !== 'ALL' && r.lugar !== selectedLugar) return false;
         if (selectedEquiposArr.length > 0 && !selectedEquiposArr.includes(r.equipo)) return false;
@@ -1302,8 +1296,8 @@
       document.getElementById('tableScopeDate').textContent = scopeLabel || '-';
       document.getElementById('tableBannerTitle').textContent = theme.tableTitle;
 
-      renderMainChart(activeData, theme);
-      renderReportTable(activeData, selectedLugar);
+      renderMainChart(activeData, theme, selectedEquiposArr);
+      renderReportTable(activeData, selectedEquiposArr, selectedLugar);
     }
 
     function drawPillBadge(ctx, text, centerX, centerY, bgColor, textColor, borderColor = '#ffffff') {
@@ -1429,12 +1423,13 @@
       }
     };
 
-    function renderMainChart(activeData, theme) {
+    function renderMainChart(activeData, theme, selectedEquiposArr) {
       if (charts.main) charts.main.destroy();
       const ctx = document.getElementById('mainTimeChart').getContext('2d');
 
+      // Filtrar únicamente los equipos seleccionados que además tengan actividad o pertenezcan al período
       const activeEquiposSet = new Set(activeData.map(r => normalizeEquipoName(r.equipo)));
-      const orderedEquipos = [...activeEquiposSet].sort(compareEquipos);
+      const orderedEquipos = ORDEN_EQUIPOS.filter(eq => selectedEquiposArr.includes(eq) && activeEquiposSet.has(eq));
 
       const activeLugaresSet = new Set();
       activeData.forEach(r => {
@@ -1455,13 +1450,11 @@
 
       activeData.forEach(r => {
         const eq = normalizeEquipoName(r.equipo);
-        if (!hoursByEquipoLugar.has(eq)) {
-          hoursByEquipoLugar.set(eq, new Map());
-          combByEquipo.set(eq, 0);
+        if (hoursByEquipoLugar.has(eq)) {
+          const lugarMap = hoursByEquipoLugar.get(eq);
+          lugarMap.set(r.lugar, (lugarMap.get(r.lugar) || 0) + r.totalHoras);
+          combByEquipo.set(eq, (combByEquipo.get(eq) || 0) + r.combustible);
         }
-        const lugarMap = hoursByEquipoLugar.get(eq);
-        lugarMap.set(r.lugar, (lugarMap.get(r.lugar) || 0) + r.totalHoras);
-        combByEquipo.set(eq, (combByEquipo.get(eq) || 0) + r.combustible);
       });
 
       const barDatasets = lugaresList.map((lugar, idx) => {
@@ -1612,12 +1605,11 @@
       return Number.isInteger(val) ? String(val) : val.toFixed(1);
     }
 
-    function renderReportTable(activeData, selectedLugar) {
+    function renderReportTable(activeData, selectedEquiposArr, selectedLugar) {
       const tbody = document.getElementById('reportTableBody');
       tbody.innerHTML = '';
 
-      const activeEquiposSet = new Set(activeData.map(r => normalizeEquipoName(r.equipo)));
-      let orderedEquipos = [...activeEquiposSet].sort(compareEquipos);
+      const orderedEquipos = ORDEN_EQUIPOS.filter(eq => selectedEquiposArr.includes(eq));
 
       const rowsToRender = orderedEquipos.map(eq => {
         const matches = activeData
