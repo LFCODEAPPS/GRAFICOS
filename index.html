@@ -384,7 +384,7 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 0.87rem;
-      min-width: 1120px;
+      min-width: 1240px;
     }
 
     table.report-table thead th {
@@ -530,8 +530,8 @@
       <div class="status-bar">
         <span id="lastUpdate">Cargando datos...</span>
         <button class="btn-refresh" onclick="fetchSheetData()">↻ Actualizar</button>
-        <button class="btn-download" id="btnDownloadAll" onclick="downloadSectionAsImage('exportContainer', 'Reporte_Completo', this)">
-          📷 Descargar Imagen
+        <button class="btn-download" id="btnDownloadAll" onclick="downloadSectionAsImage('exportContainer', 'Reporte_Completo_HD', this)">
+          📷 Descargar Imagen HD
         </button>
       </div>
     </header>
@@ -567,14 +567,14 @@
         </div>
       </div>
 
-      <!-- Contenedor unificado para exportar Gráfico + Tabla juntos como imagen -->
+      <!-- Contenedor unificado para exportar Gráfico + Tabla juntos como imagen HD -->
       <div id="exportContainer">
         <!-- Gráfico Único -->
         <div class="chart-card" id="chartCardBlock">
           <div class="chart-header">
             <div class="chart-header-left" data-html2canvas-ignore="true">
-              <button class="btn-mini-export" onclick="downloadSectionAsImage('chartCardBlock', 'Grafico_Maquinaria', this)" title="Descargar solo gráfico">
-                📷 PNG
+              <button class="btn-mini-export" onclick="downloadSectionAsImage('chartCardBlock', 'Grafico_Maquinaria_HD', this)" title="Descargar solo gráfico en HD">
+                📷 PNG HD
               </button>
             </div>
             <h2 id="mainChartTitle">RESUMEN DIARIO DE MAQUINARIA HORAS Y COMBUSTIBLE</h2>
@@ -592,8 +592,8 @@
             <div class="table-banner-title" id="tableBannerTitle">
               REPORTE DIARIO MAQUINARIA (HORAS, COMBUSTIBLE Y HORAS RESTANTES PARA MTTO)
             </div>
-            <button class="btn-mini-export-dark" data-html2canvas-ignore="true" onclick="downloadSectionAsImage('tableCardBlock', 'Tabla_Maquinaria', this)" title="Descargar solo tabla">
-              📷 PNG
+            <button class="btn-mini-export-dark" data-html2canvas-ignore="true" onclick="downloadSectionAsImage('tableCardBlock', 'Tabla_Maquinaria_HD', this)" title="Descargar solo tabla en HD">
+              📷 PNG HD
             </button>
           </div>
           <div class="table-responsive">
@@ -1599,7 +1599,7 @@
       });
     }
 
-    // Exportar el Gráfico, la Tabla o Ambos en una imagen PNG de alta resolución sin recortes
+    // Exportar el Gráfico, la Tabla o Ambos en Ultra HD (3x) y ancho completo sin ningún recorte
     async function downloadSectionAsImage(elementId, prefix, btnEl) {
       const target = document.getElementById(elementId);
       if (!target) return;
@@ -1607,46 +1607,84 @@
       const originalText = btnEl ? btnEl.innerHTML : '';
       if (btnEl) {
         btnEl.disabled = true;
-        btnEl.innerHTML = '⏳ Generando...';
+        btnEl.innerHTML = '⏳ Generando HD...';
       }
 
+      const liveWrapper = document.querySelector('#chartCardBlock .chart-wrapper');
+      const prevWrapperWidth = liveWrapper ? liveWrapper.style.width : '';
+      const prevDPR = charts.main ? charts.main.options.devicePixelRatio : window.devicePixelRatio;
+
       try {
-        // Clonar fuera de pantalla con ancho completo de escritorio (1380px) para evitar recortes en pantallas pequeñas
+        // 1. Calcular el ancho real necesario para que la tabla completa entre al 100% sin recortes
+        const liveTable = document.querySelector('#tableCardBlock .report-table');
+        const naturalTableWidth = liveTable ? Math.max(liveTable.scrollWidth, liveTable.offsetWidth, 1480) : 1480;
+        const innerContentWidth = Math.max(1500, naturalTableWidth + 24);
+        const totalExportWidth = innerContentWidth + 48; // +24px padding izquierda/derecha
+
+        // 2. Si el bloque incluye el gráfico, renderizar Chart.js temporalmente a ancho completo y DPR 3x (Ultra HD)
+        let hdChartDataUrl = null;
+        if (target.querySelector('#mainTimeChart') && charts.main && liveWrapper) {
+          liveWrapper.style.width = `${innerContentWidth - 48}px`;
+          charts.main.options.devicePixelRatio = 3;
+          charts.main.resize();
+          charts.main.update('none');
+          hdChartDataUrl = charts.main.toBase64Image('image/png', 1.0);
+        }
+
+        // 3. Crear contenedor fuera de pantalla con el ancho exacto calculado
         const offscreenWrapper = document.createElement('div');
         offscreenWrapper.style.position = 'fixed';
         offscreenWrapper.style.left = '-99999px';
         offscreenWrapper.style.top = '0';
-        offscreenWrapper.style.width = '1380px';
+        offscreenWrapper.style.width = `${totalExportWidth}px`;
         offscreenWrapper.style.backgroundColor = '#f1f5f9';
-        offscreenWrapper.style.padding = '20px';
+        offscreenWrapper.style.padding = '24px';
         offscreenWrapper.style.zIndex = '-1';
 
         const clone = target.cloneNode(true);
+        clone.style.width = `${innerContentWidth}px`;
 
-        // Convertir el canvas en vivo de Chart.js a imagen nítida dentro del clon
-        const liveCanvas = target.querySelector('#mainTimeChart');
+        // Reemplazar canvas del gráfico por su versión Ultra HD 3x
         const clonedCanvas = clone.querySelector('#mainTimeChart');
-        if (liveCanvas && clonedCanvas) {
+        if (hdChartDataUrl && clonedCanvas) {
           const img = document.createElement('img');
-          img.src = liveCanvas.toDataURL('image/png', 1.0);
+          img.src = hdChartDataUrl;
           img.style.width = '100%';
           img.style.height = '100%';
           img.style.display = 'block';
           clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
         }
 
-        // Asegurar que la tabla muestre todas sus columnas completas sin scroll horizontal
-        clone.querySelectorAll('.table-responsive').forEach(el => {
+        // Liberar cualquier recorte u overflow en la tarjeta de tabla y su contenedor
+        clone.querySelectorAll('.table-card, .table-responsive').forEach(el => {
           el.style.overflow = 'visible';
+          el.style.width = '100%';
+          el.style.maxWidth = 'none';
+        });
+
+        clone.querySelectorAll('.report-table').forEach(tbl => {
+          tbl.style.width = '100%';
+          tbl.style.minWidth = `${innerContentWidth}px`;
         });
 
         offscreenWrapper.appendChild(clone);
         document.body.appendChild(offscreenWrapper);
 
+        // Esperar un frame para asegurar que las imágenes y estilos del clon estén pintados
+        await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 60)));
+
+        const fullHeight = offscreenWrapper.scrollHeight;
+
         const canvasImage = await html2canvas(offscreenWrapper, {
-          scale: 2,
+          scale: 3, // Ultra HD (3x)
           useCORS: true,
           backgroundColor: '#f1f5f9',
+          width: totalExportWidth,
+          height: fullHeight,
+          windowWidth: totalExportWidth,
+          windowHeight: fullHeight,
+          scrollX: 0,
+          scrollY: 0,
           logging: false
         });
 
@@ -1658,15 +1696,32 @@
 
         const fileName = `${prefix}_${scopeText || 'Maquinaria'}.png`;
 
-        const link = document.createElement('a');
-        link.download = fileName;
-        link.href = canvasImage.toDataURL('image/png', 1.0);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // Descargar como Blob PNG sin pérdida de calidad
+        await new Promise((resolve) => {
+          canvasImage.toBlob((blob) => {
+            if (blob) {
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.download = fileName;
+              link.href = url;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              setTimeout(() => URL.revokeObjectURL(url), 2000);
+            }
+            resolve();
+          }, 'image/png', 1.0);
+        });
       } catch (err) {
-        alert(`No se pudo generar la imagen: ${err.message}`);
+        alert(`No se pudo generar la imagen HD: ${err.message}`);
       } finally {
+        // Restaurar tamaño normal responsivo del gráfico en pantalla
+        if (liveWrapper && charts.main) {
+          liveWrapper.style.width = prevWrapperWidth;
+          charts.main.options.devicePixelRatio = prevDPR;
+          charts.main.resize();
+          charts.main.update('none');
+        }
         if (btnEl) {
           btnEl.disabled = false;
           btnEl.innerHTML = originalText;
