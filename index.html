@@ -38,7 +38,7 @@
     }
 
     .container {
-      max-width: 1400px;
+      max-width: 1440px;
       margin: 0 auto;
     }
 
@@ -107,7 +107,7 @@
       padding: 16px;
       margin-bottom: 24px;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 16px;
       align-items: end;
     }
@@ -123,7 +123,7 @@
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: var(--text-muted);
-      font-weight: 600;
+      font-weight: 700;
     }
 
     select {
@@ -133,6 +133,7 @@
       padding: 9px 12px;
       border-radius: 8px;
       font-size: 0.9rem;
+      font-weight: 500;
       outline: none;
       cursor: pointer;
     }
@@ -255,7 +256,7 @@
 
     .chart-wrapper {
       position: relative;
-      height: 500px;
+      height: 540px;
       width: 100%;
     }
 
@@ -293,7 +294,7 @@
     <div id="loader">Conectando con Google Sheets y procesando registros...</div>
 
     <div id="dashboardContent" style="display: none;">
-      <!-- Filtros: Vista Temporal + Fecha (al inicio) + Lugar + Equipo -->
+      <!-- Filtros: Vista Temporal + Selector Dinámico (Fecha / Semana / Mes) + Lugar + Equipo -->
       <div class="controls-panel">
         <div class="control-group">
           <label>Vista Temporal</label>
@@ -305,8 +306,8 @@
         </div>
 
         <div class="control-group">
-          <label for="filterFecha">Fecha</label>
-          <select id="filterFecha"></select>
+          <label for="filterTemporal" id="filterTemporalLabel">FECHA</label>
+          <select id="filterTemporal"></select>
         </div>
 
         <div class="control-group">
@@ -358,11 +359,21 @@
     const GID = '1193959640';
     const CSV_EXPORT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
 
-    // Paleta de colores diferenciada por vista temporal
+    // Paletas distintas por vista temporal (con múltiples colores contrastantes para el modo bandera por Lugar)
     const PERIOD_THEMES = {
       daily: {
         title: 'RESUMEN DIARIO DE MAQUINARIA HORAS Y COMBUSTIBLE',
-        barColor: '#f59e0b',
+        selectorLabel: 'FECHA',
+        flagColors: [
+          '#f59e0b', // Ámbar
+          '#0d9488', // Verde azulado
+          '#ea580c', // Naranja intenso
+          '#2563eb', // Azul real
+          '#7c3aed', // Violeta
+          '#65a30d', // Verde lima
+          '#e11d48', // Carmesí
+          '#0891b2'  // Cian
+        ],
         axisLeftColor: '#d97706',
         lineColor: '#0284c7',
         lineBg: 'rgba(2, 132, 199, 0.15)',
@@ -374,7 +385,17 @@
       },
       weekly: {
         title: 'RESUMEN SEMANAL DE MAQUINARIA HORAS Y COMBUSTIBLE',
-        barColor: '#10b981',
+        selectorLabel: 'SEMANA',
+        flagColors: [
+          '#10b981', // Esmeralda
+          '#f59e0b', // Ámbar
+          '#4f46e5', // Índigo
+          '#e11d48', // Carmesí
+          '#06b6d4', // Turquesa
+          '#f97316', // Naranja
+          '#8b5cf6', // Púrpura
+          '#14b8a6'  // Teal
+        ],
         axisLeftColor: '#059669',
         lineColor: '#6366f1',
         lineBg: 'rgba(99, 102, 241, 0.15)',
@@ -386,7 +407,17 @@
       },
       monthly: {
         title: 'RESUMEN MENSUAL DE MAQUINARIA HORAS Y COMBUSTIBLE',
-        barColor: '#2563eb',
+        selectorLabel: 'MES',
+        flagColors: [
+          '#2563eb', // Azul cobalto
+          '#f59e0b', // Ámbar dorado
+          '#059669', // Verde bosque
+          '#e11d48', // Rojo carmesí
+          '#7c3aed', // Violeta
+          '#ea580c', // Naranja
+          '#0891b2', // Cian
+          '#c026d3'  // Fucsia
+        ],
         axisLeftColor: '#1d4ed8',
         lineColor: '#e11d48',
         lineBg: 'rgba(225, 29, 72, 0.15)',
@@ -396,6 +427,12 @@
         badgeText: '#1e40af',
         badgeBorder: '#93c5fd'
       }
+    };
+
+    const MESES_ORDEN = {
+      'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4,
+      'mayo': 5, 'junio': 6, 'julio': 7, 'agosto': 8,
+      'septiembre': 9, 'setiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
     };
 
     const ORDEN_EQUIPOS = [
@@ -455,6 +492,7 @@
     }
 
     let rawRows = [];
+    let allLugares = [];
     let currentPeriod = 'daily';
     let charts = {};
 
@@ -572,7 +610,7 @@
           throw new Error('La hoja no contiene suficientes filas.');
         }
 
-        // Columnas: A(0):LUGAR, B(1):AÑO, C(2):SEM, D(3):MES, E(4):FECHA, F(5):CODIGO, G(6):OPERADOR, H(7):EQUIPO,
+        // A(0):LUGAR, B(1):AÑO, C(2):SEM, D(3):MES, E(4):FECHA, F(5):CODIGO, G(6):OPERADOR, H(7):EQUIPO,
         // I(8):H.INICIAL, J(9):H.FINAL, K(10):TOTAL, L(11):HORAS RESTANTES MTTO, M(12):COMBUSTIBLE ABASTECIDO
         rawRows = matrix.slice(1).map(cols => {
           const getCol = (idx) => cleanSpaces(cols[idx] || '');
@@ -599,7 +637,10 @@
           };
         }).filter(row => row.codigo && row.codigo.toUpperCase() !== 'CODIGO');
 
-        populateFilterOptions();
+        allLugares = [...new Set(rawRows.map(r => r.lugar).filter(Boolean))].sort();
+
+        populateStaticFilters();
+        populateTemporalSelector(true);
         updateDashboard();
 
         loader.style.display = 'none';
@@ -612,39 +653,7 @@
       }
     }
 
-    function populateFilterOptions() {
-      // 1. Filtro de Fecha: todas las fechas únicas ordenadas de la más reciente a la más antigua
-      const dateMap = new Map();
-      rawRows.forEach(r => {
-        if (r.fechaISO && !dateMap.has(r.fechaISO)) {
-          dateMap.set(r.fechaISO, {
-            iso: r.fechaISO,
-            str: r.fechaStr,
-            sem: r.sem,
-            mes: r.mes
-          });
-        }
-      });
-
-      const sortedDates = [...dateMap.values()].sort((a, b) => b.iso.localeCompare(a.iso));
-      const fechaSel = document.getElementById('filterFecha');
-      const prevFecha = fechaSel.value;
-      fechaSel.innerHTML = '';
-
-      sortedDates.forEach((d, idx) => {
-        const opt = document.createElement('option');
-        opt.value = d.iso;
-        opt.textContent = idx === 0 ? `${d.str} (Última)` : d.str;
-        fechaSel.appendChild(opt);
-      });
-
-      if (prevFecha && dateMap.has(prevFecha)) {
-        fechaSel.value = prevFecha;
-      } else if (sortedDates.length > 0) {
-        fechaSel.value = sortedDates[0].iso; // Predeterminado: última fecha
-      }
-
-      // 2. Filtro de Lugar y Equipo
+    function populateStaticFilters() {
       const fillSelect = (id, values, defaultLabel, customSort = null) => {
         const sel = document.getElementById(id);
         const current = sel.value;
@@ -664,8 +673,88 @@
         if ([...sel.options].some(o => o.value === current)) sel.value = current;
       };
 
-      fillSelect('filterLugar', rawRows.map(r => r.lugar), 'Todos los lugares');
+      fillSelect('filterLugar', allLugares, 'Todos los lugares');
       fillSelect('filterEquipo', [...ORDEN_EQUIPOS, ...rawRows.map(r => r.equipo)], 'Todos los equipos', compareEquipos);
+    }
+
+    // Cambia dinámicamente el selector entre FECHA (Diario), SEMANA (Col. C) y MES (Col. D)
+    function populateTemporalSelector(preserveSelection = false) {
+      const theme = PERIOD_THEMES[currentPeriod];
+      document.getElementById('filterTemporalLabel').textContent = theme.selectorLabel;
+
+      const sel = document.getElementById('filterTemporal');
+      const prevValue = preserveSelection ? sel.value : '';
+      sel.innerHTML = '';
+
+      if (currentPeriod === 'daily') {
+        const dateMap = new Map();
+        rawRows.forEach(r => {
+          if (r.fechaISO && !dateMap.has(r.fechaISO)) {
+            dateMap.set(r.fechaISO, r.fechaStr);
+          }
+        });
+        const sortedDates = [...dateMap.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+        sortedDates.forEach(([iso, str], idx) => {
+          const opt = document.createElement('option');
+          opt.value = iso;
+          opt.textContent = idx === 0 ? `${str} (Última)` : str;
+          sel.appendChild(opt);
+        });
+      } else if (currentPeriod === 'weekly') {
+        const weekMap = new Map();
+        rawRows.forEach(r => {
+          if (!r.sem) return;
+          const key = `${r.anio}||${r.sem}`;
+          if (!weekMap.has(key)) {
+            const semNum = parseInt(String(r.sem).replace(/\D/g, ''), 10) || 0;
+            const anioNum = parseInt(r.anio, 10) || 0;
+            weekMap.set(key, {
+              key,
+              anio: r.anio,
+              sem: r.sem,
+              sortWeight: anioNum * 100 + semNum
+            });
+          }
+        });
+        const sortedWeeks = [...weekMap.values()].sort((a, b) => b.sortWeight - a.sortWeight);
+        sortedWeeks.forEach((w, idx) => {
+          const opt = document.createElement('option');
+          opt.value = w.key;
+          const baseText = `Semana ${w.sem}${w.anio ? ' - ' + w.anio : ''}`;
+          opt.textContent = idx === 0 ? `${baseText} (Última)` : baseText;
+          sel.appendChild(opt);
+        });
+      } else {
+        const monthMap = new Map();
+        rawRows.forEach(r => {
+          if (!r.mes) return;
+          const mesLower = cleanSpaces(r.mes).toLowerCase();
+          const key = `${r.anio}||${mesLower}`;
+          if (!monthMap.has(key)) {
+            const mNum = MESES_ORDEN[mesLower] || 0;
+            const anioNum = parseInt(r.anio, 10) || 0;
+            const mesCap = r.mes.charAt(0).toUpperCase() + r.mes.slice(1).toLowerCase();
+            monthMap.set(key, {
+              key,
+              label: `${mesCap}${r.anio ? ' ' + r.anio : ''}`,
+              sortWeight: anioNum * 100 + mNum
+            });
+          }
+        });
+        const sortedMonths = [...monthMap.values()].sort((a, b) => b.sortWeight - a.sortWeight);
+        sortedMonths.forEach((m, idx) => {
+          const opt = document.createElement('option');
+          opt.value = m.key;
+          opt.textContent = idx === 0 ? `${m.label} (Último)` : m.label;
+          sel.appendChild(opt);
+        });
+      }
+
+      if (prevValue && [...sel.options].some(o => o.value === prevValue)) {
+        sel.value = prevValue;
+      } else if (sel.options.length > 0) {
+        sel.selectedIndex = 0;
+      }
     }
 
     function applyThemeColors(theme) {
@@ -680,56 +769,48 @@
       const theme = PERIOD_THEMES[currentPeriod];
       applyThemeColors(theme);
 
-      const selectedFechaISO = document.getElementById('filterFecha').value;
+      const selectedTemporal = document.getElementById('filterTemporal').value;
       const selectedLugar = document.getElementById('filterLugar').value;
       const selectedEquipo = document.getElementById('filterEquipo').value;
 
-      // Buscar referencia de la fecha elegida para conocer su Semana (Col. C), Mes (Col. D) y Año (Col. B)
-      const refRow = rawRows.find(r => r.fechaISO === selectedFechaISO) || rawRows[0] || {};
-      const targetFechaStr = refRow.fechaStr || '-';
-      const targetSem = refRow.sem || '';
-      const targetMes = refRow.mes || '';
-      const targetAnio = refRow.anio || '';
-
-      // Filtrado por Lugar y Equipo
       const baseFiltered = rawRows.filter(r => {
         if (selectedLugar !== 'ALL' && r.lugar !== selectedLugar) return false;
         if (selectedEquipo !== 'ALL' && r.equipo !== selectedEquipo) return false;
         return true;
       });
 
-      // Filtrado temporal según Diario (Fecha E), Semanal (Columna C) o Mensual (Columna D)
       let activeData = [];
-      let scopeLabel = targetFechaStr;
+      let scopeLabel = '-';
 
       if (currentPeriod === 'daily') {
-        activeData = baseFiltered.filter(r => r.fechaISO === selectedFechaISO);
-        scopeLabel = targetFechaStr;
-        document.getElementById('kpiHorasLabel').textContent = `Horas Trabajadas (${targetFechaStr})`;
-        document.getElementById('kpiCombLabel').textContent = `Combustible Col. M (${targetFechaStr})`;
+        activeData = baseFiltered.filter(r => r.fechaISO === selectedTemporal);
+        const ref = rawRows.find(r => r.fechaISO === selectedTemporal);
+        scopeLabel = ref ? ref.fechaStr : selectedTemporal;
+        document.getElementById('kpiHorasLabel').textContent = `Horas Trabajadas (${scopeLabel})`;
+        document.getElementById('kpiCombLabel').textContent = `Combustible Col. M (${scopeLabel})`;
       } else if (currentPeriod === 'weekly') {
-        activeData = baseFiltered.filter(r => {
-          const sameSem = cleanSpaces(r.sem) === cleanSpaces(targetSem);
-          const sameAnio = !targetAnio || !r.anio || r.anio === targetAnio;
-          return sameSem && sameAnio;
-        });
+        const [targetAnio, targetSem] = selectedTemporal.split('||');
+        activeData = baseFiltered.filter(r =>
+          cleanSpaces(r.sem) === cleanSpaces(targetSem) &&
+          (!targetAnio || !r.anio || r.anio === targetAnio)
+        );
         scopeLabel = `Semana ${targetSem}${targetAnio ? ' - ' + targetAnio : ''}`;
         document.getElementById('kpiHorasLabel').textContent = `Horas Acumuladas (${scopeLabel})`;
         document.getElementById('kpiCombLabel').textContent = `Combustible Col. M (${scopeLabel})`;
       } else {
-        const mesCap = targetMes ? targetMes.charAt(0).toUpperCase() + targetMes.slice(1).toLowerCase() : '-';
-        activeData = baseFiltered.filter(r => {
-          const sameMes = cleanSpaces(r.mes).toLowerCase() === cleanSpaces(targetMes).toLowerCase();
-          const sameAnio = !targetAnio || !r.anio || r.anio === targetAnio;
-          return sameMes && sameAnio;
-        });
+        const [targetAnio, targetMesLower] = selectedTemporal.split('||');
+        activeData = baseFiltered.filter(r =>
+          cleanSpaces(r.mes).toLowerCase() === cleanSpaces(targetMesLower).toLowerCase() &&
+          (!targetAnio || !r.anio || r.anio === targetAnio)
+        );
+        const mesCap = targetMesLower ? targetMesLower.charAt(0).toUpperCase() + targetMesLower.slice(1) : '-';
         scopeLabel = `${mesCap}${targetAnio ? ' ' + targetAnio : ''}`;
         document.getElementById('kpiHorasLabel').textContent = `Horas Acumuladas (${scopeLabel})`;
         document.getElementById('kpiCombLabel').textContent = `Combustible Col. M (${scopeLabel})`;
       }
 
       document.getElementById('mainChartTitle').textContent = theme.title;
-      document.getElementById('activeScopeBadge').textContent = scopeLabel;
+      document.getElementById('activeScopeBadge').textContent = scopeLabel || '-';
 
       // KPIs
       const totalHoras = activeData.reduce((acc, r) => acc + r.totalHoras, 0);
@@ -755,122 +836,298 @@
       renderMainChart(activeData, theme, selectedEquipo);
     }
 
-    // Plugin para mostrar valores numéricos encima de cada barra y punto
-    const valueLabelsPlugin = {
-      id: 'valueLabelsPlugin',
-      afterDatasetsDraw(chart) {
-        const { ctx } = chart;
-        const theme = PERIOD_THEMES[currentPeriod];
-        ctx.save();
-        ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.lineJoin = 'round';
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 3.5;
+    // Ajusta texto para que quepa limpio dentro de cada franja de la barra
+    function fitTextToWidth(ctx, text, maxWidth) {
+      if (maxWidth <= 8) return '';
+      if (ctx.measureText(text).width <= maxWidth) return text;
+      let trimmed = text;
+      while (trimmed.length > 1 && ctx.measureText(trimmed + '…').width > maxWidth) {
+        trimmed = trimmed.slice(0, -1);
+      }
+      return trimmed.length > 1 ? trimmed + '…' : '';
+    }
 
-        chart.data.datasets.forEach((dataset, datasetIndex) => {
-          const meta = chart.getDatasetMeta(datasetIndex);
+    // Dibuja píldoras redondeadas de alta visibilidad para las etiquetas de datos
+    function drawPillBadge(ctx, text, centerX, centerY, bgColor, textColor, borderColor = null) {
+      ctx.save();
+      ctx.font = '800 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      const padX = 7;
+      const height = 20;
+      const textWidth = ctx.measureText(text).width;
+      const width = textWidth + padX * 2;
+      const x = centerX - width / 2;
+      const y = centerY - height / 2;
+      const r = 6;
+
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + width - r, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+      ctx.lineTo(x + width, y + height - r);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+      ctx.lineTo(x + r, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+
+      ctx.fillStyle = bgColor;
+      ctx.fill();
+
+      if (borderColor) {
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = textColor;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, centerX, centerY + 0.5);
+      ctx.restore();
+    }
+
+    // Plugin que dibuja:
+    // 1. Dentro de cada barra/franja ("modo bandera"): el LUGAR (Columna A) y sus HORAS
+    // 2. Arriba de cada barra: etiqueta visible del TOTAL DE HORAS
+    // 3. Sobre la línea punteada: etiqueta visible del COMBUSTIBLE (Gal) sin superponerse
+    const flagAndLabelsPlugin = {
+      id: 'flagAndLabelsPlugin',
+      afterDatasetsDraw(chart) {
+        const { ctx, chartArea } = chart;
+        const theme = PERIOD_THEMES[currentPeriod];
+        const numCategories = chart.data.labels.length;
+
+        const barTopPositions = new Array(numCategories).fill(null);
+        const barTotals = new Array(numCategories).fill(0);
+
+        // 1. Recorrer las barras apiladas por Lugar ("modo bandera")
+        for (let i = 0; i < numCategories; i++) {
+          let topY = Infinity;
+          let totalH = 0;
+
+          chart.data.datasets.forEach((dataset, dsIndex) => {
+            if (dataset.type === 'line') return;
+            const meta = chart.getDatasetMeta(dsIndex);
+            if (meta.hidden) return;
+
+            const val = Number(dataset.data[i] || 0);
+            if (val <= 0) return;
+
+            const el = meta.data[i];
+            if (!el) return;
+
+            totalH += val;
+            if (el.y < topY) topY = el.y;
+
+            const segHeight = Math.abs(el.base - el.y);
+            const segCenterY = (el.base + el.y) / 2;
+            const barWidth = el.width || 36;
+            const lugarName = dataset.label || '';
+            const horasStr = `${Number.isInteger(val) ? val : val.toFixed(1)}h`;
+
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = 'rgba(15, 23, 42, 0.88)';
+            ctx.lineWidth = 3.2;
+            ctx.fillStyle = '#ffffff';
+
+            if (segHeight >= 30) {
+              // Espacio amplio: mostrar LUGAR arriba y HORAS abajo dentro de la franja
+              ctx.font = '800 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+              const fittedLugar = fitTextToWidth(ctx, lugarName, barWidth - 6);
+              if (fittedLugar) {
+                ctx.strokeText(fittedLugar, el.x, segCenterY - 6.5);
+                ctx.fillText(fittedLugar, el.x, segCenterY - 6.5);
+              }
+              ctx.font = '700 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+              ctx.strokeText(horasStr, el.x, segCenterY + 6.5);
+              ctx.fillText(horasStr, el.x, segCenterY + 6.5);
+            } else if (segHeight >= 15) {
+              // Espacio compacto: mostrar "LUGAR 4.5h" en una línea dentro de la franja
+              ctx.font = '800 9.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+              const compactText = fitTextToWidth(ctx, `${lugarName} ${horasStr}`, barWidth - 4);
+              if (compactText) {
+                ctx.strokeText(compactText, el.x, segCenterY);
+                ctx.fillText(compactText, el.x, segCenterY);
+              }
+            }
+            ctx.restore();
+          });
+
+          if (totalH > 0 && topY < Infinity) {
+            barTotals[i] = totalH;
+            const xPos = chart.scales.x.getPixelForValue(i);
+            const badgeY = Math.max(chartArea.top + 12, topY - 14);
+            barTopPositions[i] = { x: xPos, y: badgeY };
+
+            const totalStr = `${Number.isInteger(totalH) ? totalH : totalH.toFixed(1)} h`;
+            drawPillBadge(ctx, totalStr, xPos, badgeY, '#0f172a', '#ffffff', '#ffffff');
+          }
+        }
+
+        // 2. Dibujar etiquetas visibles de Combustible (Gal) sobre la línea punteada
+        chart.data.datasets.forEach((dataset, dsIndex) => {
+          if (dataset.type !== 'line') return;
+          const meta = chart.getDatasetMeta(dsIndex);
           if (meta.hidden) return;
 
-          meta.data.forEach((element, index) => {
-            const val = dataset.data[index];
-            if (!val || val <= 0) return;
+          meta.data.forEach((el, i) => {
+            const val = Number(dataset.data[i] || 0);
+            if (val <= 0) return;
 
-            const text = Number.isInteger(val) ? String(val) : val.toFixed(1);
-            if (dataset.type === 'line') {
-              ctx.strokeText(`${text}g`, element.x, element.y - 10);
-              ctx.fillStyle = theme.lineColor;
-              ctx.fillText(`${text}g`, element.x, element.y - 10);
+            const fuelStr = `${Number.isInteger(val) ? val : val.toFixed(1)} Gal`;
+            let fuelY = el.y - 16;
+
+            // Evitar colisión con la píldora de horas totales si están muy cerca
+            const barBadge = barTopPositions[i];
+            if (barBadge && Math.abs(fuelY - barBadge.y) < 24) {
+              fuelY = Math.max(chartArea.top + 12, barBadge.y - 24);
             } else {
-              ctx.strokeText(text, element.x, element.y - 6);
-              ctx.fillStyle = '#0f172a';
-              ctx.fillText(text, element.x, element.y - 6);
+              fuelY = Math.max(chartArea.top + 12, fuelY);
             }
+
+            drawPillBadge(ctx, fuelStr, el.x, fuelY, theme.lineColor, '#ffffff', '#ffffff');
           });
         });
-        ctx.restore();
       }
     };
 
-    // Renderiza siempre las 17 máquinas en el orden oficial (tanto en Diario, Semanal y Mensual)
     function renderMainChart(data, theme, selectedEquipo) {
       if (charts.main) charts.main.destroy();
       const ctx = document.getElementById('mainTimeChart').getContext('2d');
 
-      const statsByEquipo = new Map();
-      if (selectedEquipo === 'ALL') {
-        ORDEN_EQUIPOS.forEach(eq => statsByEquipo.set(eq, { horas: 0, combustible: 0 }));
-      } else {
-        statsByEquipo.set(selectedEquipo, { horas: 0, combustible: 0 });
-      }
+      // 1. Definir lista de máquinas en orden oficial
+      const targetEquipos = selectedEquipo === 'ALL'
+        ? [...ORDEN_EQUIPOS]
+        : [selectedEquipo];
 
+      const extraEquipos = [...new Set(data.map(r => normalizeEquipoName(r.equipo)))]
+        .filter(eq => selectedEquipo === 'ALL' && !targetEquipos.some(t => t.toLowerCase() === eq.toLowerCase()));
+
+      const orderedEquipos = [...targetEquipos, ...extraEquipos].sort(compareEquipos);
+
+      // 2. Identificar los lugares activos (Columna A) para pintar barras en "modo bandera"
+      const activeLugaresSet = new Set();
       data.forEach(r => {
-        const officialName = normalizeEquipoName(r.equipo);
-        if (!statsByEquipo.has(officialName)) {
-          statsByEquipo.set(officialName, { horas: 0, combustible: 0 });
-        }
-        const entry = statsByEquipo.get(officialName);
-        entry.horas += r.totalHoras;
-        entry.combustible += r.combustible;
+        if (r.totalHoras > 0) activeLugaresSet.add(r.lugar);
       });
 
-      const ordered = [...statsByEquipo.entries()]
-        .filter(([name, val]) => selectedEquipo !== 'ALL' || ORDEN_MAP.has(cleanSpaces(name).toLowerCase()) || val.horas > 0 || val.combustible > 0)
-        .sort((a, b) => compareEquipos(a[0], b[0]));
+      const lugaresList = activeLugaresSet.size > 0
+        ? allLugares.filter(l => activeLugaresSet.has(l))
+        : (allLugares.length > 0 ? [allLugares[0]] : ['SIN DATA']);
+
+      // 3. Agrupar horas por [Equipo][Lugar] y combustible total por [Equipo]
+      const hoursByEquipoLugar = new Map();
+      const combByEquipo = new Map();
+
+      orderedEquipos.forEach(eq => {
+        hoursByEquipoLugar.set(eq, new Map());
+        combByEquipo.set(eq, 0);
+      });
+
+      data.forEach(r => {
+        const eq = normalizeEquipoName(r.equipo);
+        if (!hoursByEquipoLugar.has(eq)) {
+          hoursByEquipoLugar.set(eq, new Map());
+          combByEquipo.set(eq, 0);
+        }
+        const lugarMap = hoursByEquipoLugar.get(eq);
+        lugarMap.set(r.lugar, (lugarMap.get(r.lugar) || 0) + r.totalHoras);
+        combByEquipo.set(eq, (combByEquipo.get(eq) || 0) + r.combustible);
+      });
+
+      // 4. Construir datasets: 1 dataset apilado por cada Lugar (modo bandera) + 1 dataset línea para Combustible
+      const barDatasets = lugaresList.map((lugar, idx) => {
+        const color = theme.flagColors[idx % theme.flagColors.length];
+        return {
+          label: lugar,
+          data: orderedEquipos.map(eq => {
+            const val = hoursByEquipoLugar.get(eq)?.get(lugar) || 0;
+            return Number(val.toFixed(1));
+          }),
+          backgroundColor: color,
+          borderColor: '#ffffff',
+          borderWidth: 1.5,
+          borderRadius: 4,
+          stack: 'horas',
+          order: 2,
+          yAxisID: 'y'
+        };
+      });
+
+      const fuelDataset = {
+        label: 'Combustible Abastecido (Gal)',
+        data: orderedEquipos.map(eq => Number((combByEquipo.get(eq) || 0).toFixed(1))),
+        type: 'line',
+        borderColor: theme.lineColor,
+        backgroundColor: theme.lineBg,
+        borderWidth: 3,
+        borderDash: [10, 6],
+        tension: 0.35,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        pointBackgroundColor: theme.lineColor,
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 1.5,
+        fill: false,
+        order: 1,
+        yAxisID: 'y1'
+      };
 
       charts.main = new Chart(ctx, {
         type: 'bar',
-        plugins: [valueLabelsPlugin],
+        plugins: [flagAndLabelsPlugin],
         data: {
-          labels: ordered.map(e => e[0]),
-          datasets: [
-            {
-              label: 'Horas Trabajadas (h)',
-              data: ordered.map(e => Number(e[1].horas.toFixed(1))),
-              backgroundColor: theme.barColor,
-              borderRadius: 6,
-              order: 2,
-              yAxisID: 'y'
-            },
-            {
-              label: 'Combustible Abastecido (Gal)',
-              data: ordered.map(e => Number(e[1].combustible.toFixed(1))),
-              type: 'line',
-              borderColor: theme.lineColor,
-              backgroundColor: theme.lineBg,
-              borderWidth: 3,
-              borderDash: [10, 6],
-              tension: 0.35,
-              pointRadius: 4.5,
-              pointHoverRadius: 6.5,
-              pointBackgroundColor: theme.lineColor,
-              fill: false,
-              order: 1,
-              yAxisID: 'y1'
-            }
-          ]
+          labels: orderedEquipos,
+          datasets: [...barDatasets, fuelDataset]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          layout: { padding: { top: 26, bottom: 4 } },
+          layout: { padding: { top: 38, bottom: 4 } },
           interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: {
               position: 'bottom',
               labels: {
                 color: '#0f172a',
-                font: { size: 12, weight: '600' },
-                padding: 22,
+                font: { size: 12, weight: '700' },
+                padding: 20,
                 usePointStyle: true
+              }
+            },
+            tooltip: {
+              backgroundColor: '#0f172a',
+              titleFont: { size: 13, weight: '700' },
+              bodyFont: { size: 12 },
+              padding: 12,
+              callbacks: {
+                label(context) {
+                  const val = context.parsed.y || 0;
+                  if (context.dataset.type === 'line') {
+                    return ` Combustible Abastecido: ${val.toFixed(1)} Gal`;
+                  }
+                  if (val <= 0) return null;
+                  return ` ${context.dataset.label}: ${val.toFixed(1)} h`;
+                },
+                footer(tooltipItems) {
+                  const totalH = tooltipItems
+                    .filter(item => item.dataset.type !== 'line')
+                    .reduce((sum, item) => sum + (item.parsed.y || 0), 0);
+                  return totalH > 0 ? `Total Horas Equipo: ${totalH.toFixed(1)} h` : '';
+                }
               }
             }
           },
           scales: {
             x: {
+              stacked: true,
               ticks: {
-                color: '#1e293b',
-                font: { size: 11, weight: '500' },
+                color: '#0f172a',
+                font: { size: 11, weight: '600' },
                 autoSkip: false,
                 maxRotation: 45,
                 minRotation: 30
@@ -880,19 +1137,20 @@
             y: {
               type: 'linear',
               position: 'left',
+              stacked: true,
               beginAtZero: true,
-              grace: '12%',
-              title: { display: true, text: 'Horas (h)', color: theme.axisLeftColor, font: { weight: '700' } },
-              ticks: { color: '#475569' },
+              grace: '16%',
+              title: { display: true, text: 'Horas (h)', color: theme.axisLeftColor, font: { size: 12, weight: '700' } },
+              ticks: { color: '#475569', font: { weight: '600' } },
               grid: { color: 'rgba(148, 163, 184, 0.25)' }
             },
             y1: {
               type: 'linear',
               position: 'right',
               beginAtZero: true,
-              grace: '12%',
-              title: { display: true, text: 'Combustible (Gal)', color: theme.lineColor, font: { weight: '700' } },
-              ticks: { color: '#475569' },
+              grace: '16%',
+              title: { display: true, text: 'Combustible (Gal)', color: theme.lineColor, font: { size: 12, weight: '700' } },
+              ticks: { color: '#475569', font: { weight: '600' } },
               grid: { drawOnChartArea: false }
             }
           }
@@ -906,11 +1164,12 @@
         document.querySelectorAll('#periodTabs button').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentPeriod = btn.dataset.period;
+        populateTemporalSelector(false);
         updateDashboard();
       });
     });
 
-    ['filterFecha', 'filterLugar', 'filterEquipo'].forEach(id => {
+    ['filterTemporal', 'filterLugar', 'filterEquipo'].forEach(id => {
       document.getElementById(id).addEventListener('change', updateDashboard);
     });
 
