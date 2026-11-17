@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RESUMEN DIARIO DE MAQUINARIA HORAS Y COMBUSTIBLE</title>
+  <title>RESUMEN DE MAQUINARIA HORAS Y COMBUSTIBLE</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -13,10 +13,11 @@
       --border: #e2e8f0;
       --text: #0f172a;
       --text-muted: #64748b;
-      --primary: #f59e0b;
-      --primary-dark: #d97706;
-      --primary-soft: #fef3c7;
-      --secondary: #0284c7;
+      --accent: #f59e0b;
+      --accent-text: #0f172a;
+      --badge-bg: #fef3c7;
+      --badge-text: #b45309;
+      --badge-border: #fcd34d;
       --danger: #dc2626;
       --radius: 12px;
       --shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
@@ -106,7 +107,7 @@
       padding: 16px;
       margin-bottom: 24px;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
       gap: 16px;
       align-items: end;
     }
@@ -133,10 +134,11 @@
       border-radius: 8px;
       font-size: 0.9rem;
       outline: none;
+      cursor: pointer;
     }
 
     select:focus {
-      border-color: var(--primary-dark);
+      border-color: var(--accent);
       background: #ffffff;
     }
 
@@ -162,9 +164,9 @@
     }
 
     .period-tabs button.active {
-      background: var(--primary);
-      color: #0f172a;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      background: var(--accent);
+      color: var(--accent-text);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
     }
 
     /* KPI Cards */
@@ -230,13 +232,14 @@
     .date-tag {
       grid-column: 3;
       justify-self: end;
-      background: var(--primary-soft);
-      color: #b45309;
-      border: 1px solid #fcd34d;
+      background: var(--badge-bg);
+      color: var(--badge-text);
+      border: 1px solid var(--badge-border);
       padding: 5px 14px;
       border-radius: 20px;
       font-size: 0.85rem;
       font-weight: 700;
+      transition: all 0.2s;
     }
 
     @media (max-width: 820px) {
@@ -252,14 +255,14 @@
 
     .chart-wrapper {
       position: relative;
-      height: 490px;
+      height: 500px;
       width: 100%;
     }
 
     #loader {
       text-align: center;
       padding: 40px;
-      color: var(--primary-dark);
+      color: #d97706;
       font-weight: 600;
     }
 
@@ -290,7 +293,7 @@
     <div id="loader">Conectando con Google Sheets y procesando registros...</div>
 
     <div id="dashboardContent" style="display: none;">
-      <!-- Filtros -->
+      <!-- Filtros: Vista Temporal + Fecha (al inicio) + Lugar + Equipo -->
       <div class="controls-panel">
         <div class="control-group">
           <label>Vista Temporal</label>
@@ -302,27 +305,22 @@
         </div>
 
         <div class="control-group">
-          <label for="filterLugar">Lugar / Frente</label>
-          <select id="filterLugar"><option value="ALL">Todos los lugares</option></select>
+          <label for="filterFecha">Fecha</label>
+          <select id="filterFecha"></select>
         </div>
 
         <div class="control-group">
-          <label for="filterAnio">Año</label>
-          <select id="filterAnio"><option value="ALL">Todos</option></select>
+          <label for="filterLugar">Lugar / Frente</label>
+          <select id="filterLugar"><option value="ALL">Todos los lugares</option></select>
         </div>
 
         <div class="control-group">
           <label for="filterEquipo">Equipo (Orden de Flota)</label>
           <select id="filterEquipo"><option value="ALL">Todos los equipos</option></select>
         </div>
-
-        <div class="control-group">
-          <label for="filterCodigo">Código de Máquina</label>
-          <select id="filterCodigo"><option value="ALL">Todas las máquinas</option></select>
-        </div>
       </div>
 
-      <!-- KPIs (sin textos naranjas) -->
+      <!-- KPIs -->
       <div class="kpi-grid">
         <div class="kpi-card">
           <div class="label" id="kpiHorasLabel">Total Horas Trabajadas</div>
@@ -359,6 +357,46 @@
     const SHEET_ID = '1YL5wIhK9Po-Je5P96Nm0m4cqiLqx0FrhiRCttU3wA7Y';
     const GID = '1193959640';
     const CSV_EXPORT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
+
+    // Paleta de colores diferenciada por vista temporal
+    const PERIOD_THEMES = {
+      daily: {
+        title: 'RESUMEN DIARIO DE MAQUINARIA HORAS Y COMBUSTIBLE',
+        barColor: '#f59e0b',
+        axisLeftColor: '#d97706',
+        lineColor: '#0284c7',
+        lineBg: 'rgba(2, 132, 199, 0.15)',
+        tabBg: '#f59e0b',
+        tabText: '#0f172a',
+        badgeBg: '#fef3c7',
+        badgeText: '#b45309',
+        badgeBorder: '#fcd34d'
+      },
+      weekly: {
+        title: 'RESUMEN SEMANAL DE MAQUINARIA HORAS Y COMBUSTIBLE',
+        barColor: '#10b981',
+        axisLeftColor: '#059669',
+        lineColor: '#6366f1',
+        lineBg: 'rgba(99, 102, 241, 0.15)',
+        tabBg: '#10b981',
+        tabText: '#ffffff',
+        badgeBg: '#d1fae5',
+        badgeText: '#065f46',
+        badgeBorder: '#6ee7b7'
+      },
+      monthly: {
+        title: 'RESUMEN MENSUAL DE MAQUINARIA HORAS Y COMBUSTIBLE',
+        barColor: '#2563eb',
+        axisLeftColor: '#1d4ed8',
+        lineColor: '#e11d48',
+        lineBg: 'rgba(225, 29, 72, 0.15)',
+        tabBg: '#2563eb',
+        tabText: '#ffffff',
+        badgeBg: '#dbeafe',
+        badgeText: '#1e40af',
+        badgeBorder: '#93c5fd'
+      }
+    };
 
     const ORDEN_EQUIPOS = [
       'Excavadora 1 (336 D2L)',
@@ -419,12 +457,6 @@
     let rawRows = [];
     let currentPeriod = 'daily';
     let charts = {};
-
-    const MESES_ORDEN = {
-      'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4,
-      'mayo': 5, 'junio': 6, 'julio': 7, 'agosto': 8,
-      'septiembre': 9, 'setiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
-    };
 
     function parseCSV(text) {
       const rows = [];
@@ -540,12 +572,14 @@
           throw new Error('La hoja no contiene suficientes filas.');
         }
 
+        // Columnas: A(0):LUGAR, B(1):AÑO, C(2):SEM, D(3):MES, E(4):FECHA, F(5):CODIGO, G(6):OPERADOR, H(7):EQUIPO,
+        // I(8):H.INICIAL, J(9):H.FINAL, K(10):TOTAL, L(11):HORAS RESTANTES MTTO, M(12):COMBUSTIBLE ABASTECIDO
         rawRows = matrix.slice(1).map(cols => {
           const getCol = (idx) => cleanSpaces(cols[idx] || '');
           const fechaObj = parseFechaStr(getCol(4));
           const anio = getCol(1) || (fechaObj ? String(fechaObj.getFullYear()) : '');
-          const sem = parseInt(getCol(2), 10) || 0;
-          const mes = getCol(3);
+          const sem = getCol(2); // Columna C
+          const mes = getCol(3); // Columna D
           const mttoRaw = getCol(11);
 
           return {
@@ -559,12 +593,9 @@
             codigo: getCol(5),
             operador: getCol(6),
             equipo: normalizeEquipoName(getCol(7)),
-            hInicial: parseNum(getCol(8)),
-            hFinal: parseNum(getCol(9)),
-            totalHoras: parseNum(getCol(10)),
-            horasRestantesMtto: mttoRaw !== '' ? parseNum(mttoRaw) : null,
-            combustible: parseNum(getCol(12)), // Columna M
-            galonesPorHora: parseNum(getCol(13))
+            totalHoras: parseNum(getCol(10)),                     // Columna K
+            horasRestantesMtto: mttoRaw !== '' ? parseNum(mttoRaw) : null, // Columna L
+            combustible: parseNum(getCol(12))                     // Columna M
           };
         }).filter(row => row.codigo && row.codigo.toUpperCase() !== 'CODIGO');
 
@@ -582,6 +613,38 @@
     }
 
     function populateFilterOptions() {
+      // 1. Filtro de Fecha: todas las fechas únicas ordenadas de la más reciente a la más antigua
+      const dateMap = new Map();
+      rawRows.forEach(r => {
+        if (r.fechaISO && !dateMap.has(r.fechaISO)) {
+          dateMap.set(r.fechaISO, {
+            iso: r.fechaISO,
+            str: r.fechaStr,
+            sem: r.sem,
+            mes: r.mes
+          });
+        }
+      });
+
+      const sortedDates = [...dateMap.values()].sort((a, b) => b.iso.localeCompare(a.iso));
+      const fechaSel = document.getElementById('filterFecha');
+      const prevFecha = fechaSel.value;
+      fechaSel.innerHTML = '';
+
+      sortedDates.forEach((d, idx) => {
+        const opt = document.createElement('option');
+        opt.value = d.iso;
+        opt.textContent = idx === 0 ? `${d.str} (Última)` : d.str;
+        fechaSel.appendChild(opt);
+      });
+
+      if (prevFecha && dateMap.has(prevFecha)) {
+        fechaSel.value = prevFecha;
+      } else if (sortedDates.length > 0) {
+        fechaSel.value = sortedDates[0].iso; // Predeterminado: última fecha
+      }
+
+      // 2. Filtro de Lugar y Equipo
       const fillSelect = (id, values, defaultLabel, customSort = null) => {
         const sel = document.getElementById(id);
         const current = sel.value;
@@ -602,68 +665,71 @@
       };
 
       fillSelect('filterLugar', rawRows.map(r => r.lugar), 'Todos los lugares');
-      fillSelect('filterAnio', rawRows.map(r => r.anio), 'Todos los años');
       fillSelect('filterEquipo', [...ORDEN_EQUIPOS, ...rawRows.map(r => r.equipo)], 'Todos los equipos', compareEquipos);
-
-      const codigoToEquipo = new Map();
-      rawRows.forEach(r => {
-        if (r.codigo && r.equipo) codigoToEquipo.set(r.codigo, r.equipo);
-      });
-      fillSelect('filterCodigo', rawRows.map(r => r.codigo), 'Todas las máquinas', (codA, codB) => {
-        const cmp = compareEquipos(codigoToEquipo.get(codA), codigoToEquipo.get(codB));
-        return cmp !== 0 ? cmp : codA.localeCompare(codB);
-      });
     }
 
-    function getFilteredData() {
-      const lugar = document.getElementById('filterLugar').value;
-      const anio = document.getElementById('filterAnio').value;
-      const equipo = document.getElementById('filterEquipo').value;
-      const codigo = document.getElementById('filterCodigo').value;
-
-      return rawRows.filter(r => {
-        if (lugar !== 'ALL' && r.lugar !== lugar) return false;
-        if (anio !== 'ALL' && r.anio !== anio) return false;
-        if (equipo !== 'ALL' && r.equipo !== equipo) return false;
-        if (codigo !== 'ALL' && r.codigo !== codigo) return false;
-        return true;
-      });
-    }
-
-    function getLatestDateInfo(data) {
-      let maxISO = '';
-      let maxStr = '-';
-      data.forEach(r => {
-        if (r.fechaISO && r.fechaISO > maxISO) {
-          maxISO = r.fechaISO;
-          maxStr = r.fechaStr;
-        }
-      });
-      return { maxISO, maxStr };
+    function applyThemeColors(theme) {
+      document.documentElement.style.setProperty('--accent', theme.tabBg);
+      document.documentElement.style.setProperty('--accent-text', theme.tabText);
+      document.documentElement.style.setProperty('--badge-bg', theme.badgeBg);
+      document.documentElement.style.setProperty('--badge-text', theme.badgeText);
+      document.documentElement.style.setProperty('--badge-border', theme.badgeBorder);
     }
 
     function updateDashboard() {
-      const baseData = getFilteredData();
-      const { maxISO, maxStr } = getLatestDateInfo(baseData);
+      const theme = PERIOD_THEMES[currentPeriod];
+      applyThemeColors(theme);
 
-      const activeData = (currentPeriod === 'daily' && maxISO)
-        ? baseData.filter(r => r.fechaISO === maxISO)
-        : baseData;
+      const selectedFechaISO = document.getElementById('filterFecha').value;
+      const selectedLugar = document.getElementById('filterLugar').value;
+      const selectedEquipo = document.getElementById('filterEquipo').value;
 
-      const scopeBadge = document.getElementById('activeScopeBadge');
+      // Buscar referencia de la fecha elegida para conocer su Semana (Col. C), Mes (Col. D) y Año (Col. B)
+      const refRow = rawRows.find(r => r.fechaISO === selectedFechaISO) || rawRows[0] || {};
+      const targetFechaStr = refRow.fechaStr || '-';
+      const targetSem = refRow.sem || '';
+      const targetMes = refRow.mes || '';
+      const targetAnio = refRow.anio || '';
+
+      // Filtrado por Lugar y Equipo
+      const baseFiltered = rawRows.filter(r => {
+        if (selectedLugar !== 'ALL' && r.lugar !== selectedLugar) return false;
+        if (selectedEquipo !== 'ALL' && r.equipo !== selectedEquipo) return false;
+        return true;
+      });
+
+      // Filtrado temporal según Diario (Fecha E), Semanal (Columna C) o Mensual (Columna D)
+      let activeData = [];
+      let scopeLabel = targetFechaStr;
+
       if (currentPeriod === 'daily') {
-        scopeBadge.textContent = maxStr;
-        document.getElementById('kpiHorasLabel').textContent = `Horas Trabajadas (${maxStr})`;
-        document.getElementById('kpiCombLabel').textContent = `Combustible Col. M (${maxStr})`;
+        activeData = baseFiltered.filter(r => r.fechaISO === selectedFechaISO);
+        scopeLabel = targetFechaStr;
+        document.getElementById('kpiHorasLabel').textContent = `Horas Trabajadas (${targetFechaStr})`;
+        document.getElementById('kpiCombLabel').textContent = `Combustible Col. M (${targetFechaStr})`;
       } else if (currentPeriod === 'weekly') {
-        scopeBadge.textContent = 'Semanal';
-        document.getElementById('kpiHorasLabel').textContent = 'Total Horas Trabajadas (Semanal)';
-        document.getElementById('kpiCombLabel').textContent = 'Combustible Col. M (Semanal)';
+        activeData = baseFiltered.filter(r => {
+          const sameSem = cleanSpaces(r.sem) === cleanSpaces(targetSem);
+          const sameAnio = !targetAnio || !r.anio || r.anio === targetAnio;
+          return sameSem && sameAnio;
+        });
+        scopeLabel = `Semana ${targetSem}${targetAnio ? ' - ' + targetAnio : ''}`;
+        document.getElementById('kpiHorasLabel').textContent = `Horas Acumuladas (${scopeLabel})`;
+        document.getElementById('kpiCombLabel').textContent = `Combustible Col. M (${scopeLabel})`;
       } else {
-        scopeBadge.textContent = 'Mensual';
-        document.getElementById('kpiHorasLabel').textContent = 'Total Horas Trabajadas (Mensual)';
-        document.getElementById('kpiCombLabel').textContent = 'Combustible Col. M (Mensual)';
+        const mesCap = targetMes ? targetMes.charAt(0).toUpperCase() + targetMes.slice(1).toLowerCase() : '-';
+        activeData = baseFiltered.filter(r => {
+          const sameMes = cleanSpaces(r.mes).toLowerCase() === cleanSpaces(targetMes).toLowerCase();
+          const sameAnio = !targetAnio || !r.anio || r.anio === targetAnio;
+          return sameMes && sameAnio;
+        });
+        scopeLabel = `${mesCap}${targetAnio ? ' ' + targetAnio : ''}`;
+        document.getElementById('kpiHorasLabel').textContent = `Horas Acumuladas (${scopeLabel})`;
+        document.getElementById('kpiCombLabel').textContent = `Combustible Col. M (${scopeLabel})`;
       }
+
+      document.getElementById('mainChartTitle').textContent = theme.title;
+      document.getElementById('activeScopeBadge').textContent = scopeLabel;
 
       // KPIs
       const totalHoras = activeData.reduce((acc, r) => acc + r.totalHoras, 0);
@@ -672,7 +738,7 @@
       const uniqueActiveMachines = new Set(activeRows.map(r => r.codigo)).size;
 
       const latestByMachine = {};
-      baseData.forEach(r => {
+      baseFiltered.forEach(r => {
         const key = `${r.equipo}__${r.codigo}`;
         if (!latestByMachine[key] || (r.fechaObj && (!latestByMachine[key].fechaObj || r.fechaObj >= latestByMachine[key].fechaObj))) {
           latestByMachine[key] = r;
@@ -686,14 +752,15 @@
       document.getElementById('kpiEquipos').textContent = uniqueActiveMachines;
       document.getElementById('kpiAlertasMtto').textContent = alertasMtto;
 
-      renderMainChart(activeData);
+      renderMainChart(activeData, theme, selectedEquipo);
     }
 
-    // Plugin de etiquetas numéricas adaptado a modo claro con contorno blanco para máxima legibilidad
+    // Plugin para mostrar valores numéricos encima de cada barra y punto
     const valueLabelsPlugin = {
       id: 'valueLabelsPlugin',
       afterDatasetsDraw(chart) {
         const { ctx } = chart;
+        const theme = PERIOD_THEMES[currentPeriod];
         ctx.save();
         ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.textAlign = 'center';
@@ -712,7 +779,7 @@
             const text = Number.isInteger(val) ? String(val) : val.toFixed(1);
             if (dataset.type === 'line') {
               ctx.strokeText(`${text}g`, element.x, element.y - 10);
-              ctx.fillStyle = '#0284c7';
+              ctx.fillStyle = theme.lineColor;
               ctx.fillText(`${text}g`, element.x, element.y - 10);
             } else {
               ctx.strokeText(text, element.x, element.y - 6);
@@ -725,172 +792,59 @@
       }
     };
 
-    function renderMainChart(data) {
+    // Renderiza siempre las 17 máquinas en el orden oficial (tanto en Diario, Semanal y Mensual)
+    function renderMainChart(data, theme, selectedEquipo) {
       if (charts.main) charts.main.destroy();
       const ctx = document.getElementById('mainTimeChart').getContext('2d');
 
-      if (currentPeriod === 'daily') {
-        document.getElementById('mainChartTitle').textContent = 'RESUMEN DIARIO DE MAQUINARIA HORAS Y COMBUSTIBLE';
-
-        const statsByEquipo = new Map();
+      const statsByEquipo = new Map();
+      if (selectedEquipo === 'ALL') {
         ORDEN_EQUIPOS.forEach(eq => statsByEquipo.set(eq, { horas: 0, combustible: 0 }));
-
-        data.forEach(r => {
-          const officialName = normalizeEquipoName(r.equipo);
-          if (!statsByEquipo.has(officialName)) {
-            statsByEquipo.set(officialName, { horas: 0, combustible: 0 });
-          }
-          const entry = statsByEquipo.get(officialName);
-          entry.horas += r.totalHoras;
-          entry.combustible += r.combustible;
-        });
-
-        const ordered = [...statsByEquipo.entries()]
-          .filter(([name, val]) => ORDEN_MAP.has(cleanSpaces(name).toLowerCase()) || val.horas > 0 || val.combustible > 0)
-          .sort((a, b) => compareEquipos(a[0], b[0]));
-
-        charts.main = new Chart(ctx, {
-          type: 'bar',
-          plugins: [valueLabelsPlugin],
-          data: {
-            labels: ordered.map(e => e[0]),
-            datasets: [
-              {
-                label: 'Horas Trabajadas (h)',
-                data: ordered.map(e => Number(e[1].horas.toFixed(1))),
-                backgroundColor: '#f59e0b',
-                borderRadius: 6,
-                order: 2,
-                yAxisID: 'y'
-              },
-              {
-                label: 'Combustible Abastecido (Gal)',
-                data: ordered.map(e => Number(e[1].combustible.toFixed(1))),
-                type: 'line',
-                borderColor: '#0284c7',
-                backgroundColor: 'rgba(2, 132, 199, 0.15)',
-                borderWidth: 3,
-                borderDash: [10, 6],
-                tension: 0.35,
-                pointRadius: 4.5,
-                pointHoverRadius: 6.5,
-                pointBackgroundColor: '#0284c7',
-                fill: false,
-                order: 1,
-                yAxisID: 'y1'
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            layout: { padding: { top: 24, bottom: 4 } },
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-              legend: {
-                position: 'bottom',
-                labels: {
-                  color: '#0f172a',
-                  font: { size: 12, weight: '600' },
-                  padding: 22,
-                  usePointStyle: true
-                }
-              }
-            },
-            scales: {
-              x: {
-                ticks: {
-                  color: '#1e293b',
-                  font: { size: 11, weight: '500' },
-                  autoSkip: false,
-                  maxRotation: 45,
-                  minRotation: 30
-                },
-                grid: { color: 'rgba(148, 163, 184, 0.25)' }
-              },
-              y: {
-                type: 'linear',
-                position: 'left',
-                beginAtZero: true,
-                suggestedMax: 12,
-                title: { display: true, text: 'Horas (h)', color: '#d97706', font: { weight: '700' } },
-                ticks: { color: '#475569' },
-                grid: { color: 'rgba(148, 163, 184, 0.25)' }
-              },
-              y1: {
-                type: 'linear',
-                position: 'right',
-                beginAtZero: true,
-                title: { display: true, text: 'Combustible (Gal)', color: '#0284c7', font: { weight: '700' } },
-                ticks: { color: '#475569' },
-                grid: { drawOnChartArea: false }
-              }
-            }
-          }
-        });
-        return;
+      } else {
+        statsByEquipo.set(selectedEquipo, { horas: 0, combustible: 0 });
       }
 
-      // MODO SEMANAL O MENSUAL
-      const grouped = {};
       data.forEach(r => {
-        let key = '';
-        let sortKey = '';
-
-        if (currentPeriod === 'weekly') {
-          if (!r.anio || !r.sem) return;
-          key = `${r.anio} - Sem ${String(r.sem).padStart(2, '0')}`;
-          sortKey = `${r.anio}-${String(r.sem).padStart(2, '0')}`;
-        } else {
-          if (!r.anio || !r.mes) return;
-          const mLower = r.mes.toLowerCase();
-          const mNum = MESES_ORDEN[mLower] || 0;
-          const mesCap = r.mes.charAt(0).toUpperCase() + r.mes.slice(1).toLowerCase();
-          key = `${mesCap} ${r.anio}`;
-          sortKey = `${r.anio}-${String(mNum).padStart(2, '0')}`;
+        const officialName = normalizeEquipoName(r.equipo);
+        if (!statsByEquipo.has(officialName)) {
+          statsByEquipo.set(officialName, { horas: 0, combustible: 0 });
         }
-
-        if (!grouped[sortKey]) {
-          grouped[sortKey] = { label: key, horas: 0, combustible: 0 };
-        }
-        grouped[sortKey].horas += r.totalHoras;
-        grouped[sortKey].combustible += r.combustible;
+        const entry = statsByEquipo.get(officialName);
+        entry.horas += r.totalHoras;
+        entry.combustible += r.combustible;
       });
 
-      const sortedEntries = Object.entries(grouped)
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(entry => entry[1]);
-
-      document.getElementById('mainChartTitle').textContent =
-        currentPeriod === 'weekly'
-          ? 'RESUMEN SEMANAL DE MAQUINARIA HORAS Y COMBUSTIBLE'
-          : 'RESUMEN MENSUAL DE MAQUINARIA HORAS Y COMBUSTIBLE';
+      const ordered = [...statsByEquipo.entries()]
+        .filter(([name, val]) => selectedEquipo !== 'ALL' || ORDEN_MAP.has(cleanSpaces(name).toLowerCase()) || val.horas > 0 || val.combustible > 0)
+        .sort((a, b) => compareEquipos(a[0], b[0]));
 
       charts.main = new Chart(ctx, {
         type: 'bar',
         plugins: [valueLabelsPlugin],
         data: {
-          labels: sortedEntries.map(e => e.label),
+          labels: ordered.map(e => e[0]),
           datasets: [
             {
-              label: 'Total Horas (h)',
-              data: sortedEntries.map(e => Number(e.horas.toFixed(1))),
-              backgroundColor: '#f59e0b',
+              label: 'Horas Trabajadas (h)',
+              data: ordered.map(e => Number(e[1].horas.toFixed(1))),
+              backgroundColor: theme.barColor,
               borderRadius: 6,
               order: 2,
               yAxisID: 'y'
             },
             {
-              label: 'Combustible (Gal)',
-              data: sortedEntries.map(e => Number(e.combustible.toFixed(1))),
+              label: 'Combustible Abastecido (Gal)',
+              data: ordered.map(e => Number(e[1].combustible.toFixed(1))),
               type: 'line',
-              borderColor: '#0284c7',
-              backgroundColor: 'rgba(2, 132, 199, 0.15)',
+              borderColor: theme.lineColor,
+              backgroundColor: theme.lineBg,
               borderWidth: 3,
               borderDash: [10, 6],
               tension: 0.35,
               pointRadius: 4.5,
-              pointBackgroundColor: '#0284c7',
+              pointHoverRadius: 6.5,
+              pointBackgroundColor: theme.lineColor,
+              fill: false,
               order: 1,
               yAxisID: 'y1'
             }
@@ -899,7 +853,7 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          layout: { padding: { top: 24, bottom: 4 } },
+          layout: { padding: { top: 26, bottom: 4 } },
           interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: {
@@ -913,12 +867,22 @@
             }
           },
           scales: {
-            x: { ticks: { color: '#1e293b' }, grid: { color: 'rgba(148, 163, 184, 0.25)' } },
+            x: {
+              ticks: {
+                color: '#1e293b',
+                font: { size: 11, weight: '500' },
+                autoSkip: false,
+                maxRotation: 45,
+                minRotation: 30
+              },
+              grid: { color: 'rgba(148, 163, 184, 0.25)' }
+            },
             y: {
               type: 'linear',
               position: 'left',
               beginAtZero: true,
-              title: { display: true, text: 'Horas (h)', color: '#d97706', font: { weight: '700' } },
+              grace: '12%',
+              title: { display: true, text: 'Horas (h)', color: theme.axisLeftColor, font: { weight: '700' } },
               ticks: { color: '#475569' },
               grid: { color: 'rgba(148, 163, 184, 0.25)' }
             },
@@ -926,7 +890,8 @@
               type: 'linear',
               position: 'right',
               beginAtZero: true,
-              title: { display: true, text: 'Combustible (Gal)', color: '#0284c7', font: { weight: '700' } },
+              grace: '12%',
+              title: { display: true, text: 'Combustible (Gal)', color: theme.lineColor, font: { weight: '700' } },
               ticks: { color: '#475569' },
               grid: { drawOnChartArea: false }
             }
@@ -945,7 +910,7 @@
       });
     });
 
-    ['filterLugar', 'filterAnio', 'filterEquipo', 'filterCodigo'].forEach(id => {
+    ['filterFecha', 'filterLugar', 'filterEquipo'].forEach(id => {
       document.getElementById(id).addEventListener('change', updateDashboard);
     });
 
