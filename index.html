@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RESUMEN DE MAQUINARIA HORAS Y COMBUSTIBLE</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <style>
     :root {
       --bg: #f1f5f9;
@@ -78,13 +79,15 @@
 
     .status-bar {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       font-size: 0.85rem;
       color: var(--text-muted);
     }
 
-    button.btn-refresh {
+    button.btn-refresh,
+    button.btn-download {
       background: var(--surface);
       color: var(--text);
       border: 1px solid var(--border);
@@ -94,11 +97,72 @@
       font-size: 0.85rem;
       font-weight: 600;
       box-shadow: var(--shadow);
-      transition: background 0.2s;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
 
     button.btn-refresh:hover {
       background: var(--surface-hover);
+    }
+
+    button.btn-download {
+      background: #0f172a;
+      color: #ffffff;
+      border-color: #0f172a;
+    }
+
+    button.btn-download:hover {
+      background: #1e293b;
+    }
+
+    button.btn-download:disabled {
+      opacity: 0.65;
+      cursor: wait;
+    }
+
+    /* Botones discretos de descarga individual por bloque */
+    .btn-mini-export {
+      background: #f8fafc;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+      padding: 5px 10px;
+      border-radius: 7px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s;
+    }
+
+    .btn-mini-export:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+
+    .btn-mini-export-dark {
+      background: rgba(255, 255, 255, 0.12);
+      color: #f8fafc;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 6px 12px;
+      border-radius: 7px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-right: 16px;
+      align-self: center;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .btn-mini-export-dark:hover {
+      background: rgba(255, 255, 255, 0.22);
     }
 
     /* Controls & Filters */
@@ -173,6 +237,13 @@
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
     }
 
+    /* Contenedor exportable (Gráfico + Tabla) */
+    #exportContainer {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
     /* Chart Card */
     .chart-card {
       background: var(--surface);
@@ -182,7 +253,6 @@
       padding: 24px;
       display: flex;
       flex-direction: column;
-      margin-bottom: 24px;
     }
 
     .chart-header {
@@ -193,6 +263,11 @@
       margin-bottom: 22px;
       padding-bottom: 14px;
       border-bottom: 1px solid var(--border);
+    }
+
+    .chart-header-left {
+      grid-column: 1;
+      justify-self: start;
     }
 
     .chart-header h2 {
@@ -224,6 +299,7 @@
         flex-direction: column;
         text-align: center;
       }
+      .chart-header-left,
       .date-tag {
         justify-self: center;
       }
@@ -244,7 +320,6 @@
       overflow: hidden;
     }
 
-    /* Banner superior más alto y con mayor presencia */
     .table-top-banner {
       display: flex;
       align-items: stretch;
@@ -295,6 +370,9 @@
         padding: 14px 16px;
         font-size: 1rem;
       }
+      .btn-mini-export-dark {
+        margin: 0 0 12px 0;
+      }
     }
 
     .table-responsive {
@@ -309,7 +387,6 @@
       min-width: 1120px;
     }
 
-    /* Encabezados de columna más compactos (menos altos) */
     table.report-table thead th {
       background: var(--accent);
       color: var(--accent-text);
@@ -453,6 +530,9 @@
       <div class="status-bar">
         <span id="lastUpdate">Cargando datos...</span>
         <button class="btn-refresh" onclick="fetchSheetData()">↻ Actualizar</button>
+        <button class="btn-download" id="btnDownloadAll" onclick="downloadSectionAsImage('exportContainer', 'Reporte_Completo', this)">
+          📷 Descargar Imagen
+        </button>
       </div>
     </header>
 
@@ -487,42 +567,53 @@
         </div>
       </div>
 
-      <!-- Gráfico Único -->
-      <div class="chart-card">
-        <div class="chart-header">
-          <h2 id="mainChartTitle">RESUMEN DIARIO DE MAQUINARIA HORAS Y COMBUSTIBLE</h2>
-          <span class="date-tag" id="activeScopeBadge">-</span>
-        </div>
-        <div class="chart-wrapper">
-          <canvas id="mainTimeChart"></canvas>
-        </div>
-      </div>
-
-      <!-- Tabla Detallada debajo del gráfico -->
-      <div class="table-card">
-        <div class="table-top-banner">
-          <div class="table-date-box" id="tableScopeDate">-</div>
-          <div class="table-banner-title" id="tableBannerTitle">
-            REPORTE DIARIO MAQUINARIA (HORAS, COMBUSTIBLE Y HORAS RESTANTES PARA MTTO)
+      <!-- Contenedor unificado para exportar Gráfico + Tabla juntos como imagen -->
+      <div id="exportContainer">
+        <!-- Gráfico Único -->
+        <div class="chart-card" id="chartCardBlock">
+          <div class="chart-header">
+            <div class="chart-header-left" data-html2canvas-ignore="true">
+              <button class="btn-mini-export" onclick="downloadSectionAsImage('chartCardBlock', 'Grafico_Maquinaria', this)" title="Descargar solo gráfico">
+                📷 PNG
+              </button>
+            </div>
+            <h2 id="mainChartTitle">RESUMEN DIARIO DE MAQUINARIA HORAS Y COMBUSTIBLE</h2>
+            <span class="date-tag" id="activeScopeBadge">-</span>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="mainTimeChart"></canvas>
           </div>
         </div>
-        <div class="table-responsive">
-          <table class="report-table">
-            <thead>
-              <tr>
-                <th>LUGAR</th>
-                <th>OPERADOR</th>
-                <th>UNIDAD</th>
-                <th>H. INICIAL</th>
-                <th>H. FINAL</th>
-                <th>TOTAL HORAS</th>
-                <th class="th-mtto">HORAS RESTANTES PARA MTTO</th>
-                <th>COMBUSTIBLE ABASTECIDO</th>
-                <th>HORAS RESTANTES DE COMBUSTIBLE</th>
-              </tr>
-            </thead>
-            <tbody id="reportTableBody"></tbody>
-          </table>
+
+        <!-- Tabla Detallada debajo del gráfico -->
+        <div class="table-card" id="tableCardBlock">
+          <div class="table-top-banner">
+            <div class="table-date-box" id="tableScopeDate">-</div>
+            <div class="table-banner-title" id="tableBannerTitle">
+              REPORTE DIARIO MAQUINARIA (HORAS, COMBUSTIBLE Y HORAS RESTANTES PARA MTTO)
+            </div>
+            <button class="btn-mini-export-dark" data-html2canvas-ignore="true" onclick="downloadSectionAsImage('tableCardBlock', 'Tabla_Maquinaria', this)" title="Descargar solo tabla">
+              📷 PNG
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th>LUGAR</th>
+                  <th>OPERADOR</th>
+                  <th>UNIDAD</th>
+                  <th>H. INICIAL</th>
+                  <th>H. FINAL</th>
+                  <th>TOTAL HORAS</th>
+                  <th class="th-mtto">HORAS RESTANTES PARA MTTO</th>
+                  <th>COMBUSTIBLE ABASTECIDO</th>
+                  <th>HORAS RESTANTES DE COMBUSTIBLE</th>
+                </tr>
+              </thead>
+              <tbody id="reportTableBody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -1370,9 +1461,12 @@
         const lugaresUnicos = [...new Set(matches.map(m => m.lugar).filter(l => l && l !== 'SIN DATA'))];
         const lugarStr = lugaresUnicos.length > 0 ? lugaresUnicos.join(' / ') : matches[0].lugar;
 
-        // Operadores únicos (Columna G)
-        const operadoresUnicos = [...new Set(matches.map(m => m.operador).filter(Boolean))];
-        const operadorStr = operadoresUnicos.length > 0 ? operadoresUnicos.join(' / ') : '-';
+        // Operador (Columna G): Mostrar únicamente el ÚLTIMO operador que operó la unidad
+        const operatedWithOp = matches.filter(m => m.totalHoras > 0 && cleanSpaces(m.operador) !== '');
+        const allValidOps = matches.map(m => cleanSpaces(m.operador)).filter(Boolean);
+        const operadorStr = operatedWithOp.length > 0
+          ? cleanSpaces(operatedWithOp[operatedWithOp.length - 1].operador)
+          : (allValidOps.length > 0 ? allValidOps[allValidOps.length - 1] : '-');
 
         // H. Inicial (Columna I) y H. Final (Columna J)
         const validHIni = matches.filter(m => m.hInicial !== null);
@@ -1416,7 +1510,7 @@
         tdLugar.textContent = item.lugar;
         tr.appendChild(tdLugar);
 
-        // 2. OPERADOR (Columna G - antes de UNIDAD)
+        // 2. OPERADOR (Columna G - último que operó)
         const tdOperador = document.createElement('td');
         tdOperador.className = 'td-operador';
         tdOperador.textContent = item.operador;
@@ -1503,6 +1597,81 @@
 
         tbody.appendChild(tr);
       });
+    }
+
+    // Exportar el Gráfico, la Tabla o Ambos en una imagen PNG de alta resolución sin recortes
+    async function downloadSectionAsImage(elementId, prefix, btnEl) {
+      const target = document.getElementById(elementId);
+      if (!target) return;
+
+      const originalText = btnEl ? btnEl.innerHTML : '';
+      if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.innerHTML = '⏳ Generando...';
+      }
+
+      try {
+        // Clonar fuera de pantalla con ancho completo de escritorio (1380px) para evitar recortes en pantallas pequeñas
+        const offscreenWrapper = document.createElement('div');
+        offscreenWrapper.style.position = 'fixed';
+        offscreenWrapper.style.left = '-99999px';
+        offscreenWrapper.style.top = '0';
+        offscreenWrapper.style.width = '1380px';
+        offscreenWrapper.style.backgroundColor = '#f1f5f9';
+        offscreenWrapper.style.padding = '20px';
+        offscreenWrapper.style.zIndex = '-1';
+
+        const clone = target.cloneNode(true);
+
+        // Convertir el canvas en vivo de Chart.js a imagen nítida dentro del clon
+        const liveCanvas = target.querySelector('#mainTimeChart');
+        const clonedCanvas = clone.querySelector('#mainTimeChart');
+        if (liveCanvas && clonedCanvas) {
+          const img = document.createElement('img');
+          img.src = liveCanvas.toDataURL('image/png', 1.0);
+          img.style.width = '100%';
+          img.style.height = '100%';
+          img.style.display = 'block';
+          clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
+        }
+
+        // Asegurar que la tabla muestre todas sus columnas completas sin scroll horizontal
+        clone.querySelectorAll('.table-responsive').forEach(el => {
+          el.style.overflow = 'visible';
+        });
+
+        offscreenWrapper.appendChild(clone);
+        document.body.appendChild(offscreenWrapper);
+
+        const canvasImage = await html2canvas(offscreenWrapper, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#f1f5f9',
+          logging: false
+        });
+
+        document.body.removeChild(offscreenWrapper);
+
+        const scopeText = cleanSpaces(document.getElementById('activeScopeBadge').textContent)
+          .replace(/[\/\\\s]+/g, '-')
+          .replace(/[^a-zA-Z0-9_-]/g, '');
+
+        const fileName = `${prefix}_${scopeText || 'Maquinaria'}.png`;
+
+        const link = document.createElement('a');
+        link.download = fileName;
+        link.href = canvasImage.toDataURL('image/png', 1.0);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (err) {
+        alert(`No se pudo generar la imagen: ${err.message}`);
+      } finally {
+        if (btnEl) {
+          btnEl.disabled = false;
+          btnEl.innerHTML = originalText;
+        }
+      }
     }
 
     // Event Listeners
