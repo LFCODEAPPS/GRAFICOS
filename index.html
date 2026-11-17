@@ -650,7 +650,7 @@
         </div>
 
         <div class="control-group">
-          <label>Equipo (Orden Fila Columna H - Múltiple)</label>
+          <label>Equipo (Orden Columna H - Múltiple)</label>
           <div class="multiselect-dropdown" id="equipoMultiselect">
             <button type="button" class="multiselect-btn" onclick="toggleEquipoDropdown(event)">
               <span id="equipoBtnLabel">TODOS LOS EQUIPOS</span>
@@ -925,6 +925,7 @@
           throw new Error('La hoja no contiene suficientes filas.');
         }
 
+        // Mapear manteniendo estrictamente el orden de las filas del CSV (Google Sheets)
         rawRows = matrix.slice(1).map((cols, rowIdx) => {
           const getCol = (idx) => cleanSpaces(cols[idx] || '');
           const fechaObj = parseFechaStr(getCol(4));
@@ -961,7 +962,7 @@
           };
         }).filter(row => row.codigo && row.codigo.toUpperCase() !== 'CODIGO');
 
-        allLugares = [...new Set(rawRows.map(r => r.lugar).filter(Boolean))].sort();
+        allLugares = [...new Set(rawRows.map(r => r.lugar).filter(Boolean))];
 
         populateStaticFilters();
         populateTemporalSelector(true);
@@ -1026,7 +1027,7 @@
       );
       const isFirstRender = currentChecked.size === 0;
 
-      // ORDEN EXACTO DE APARICIÓN EN LA DATA ORIGINAL (Fila por Fila)
+      // Obtener lista única de equipos conservando estrictamente el orden de aparición original (fila por fila)
       const seen = new Set();
       const allEquiposList = [];
       rawRows.forEach(r => {
@@ -1373,7 +1374,7 @@
       if (charts.main) charts.main.destroy();
       const ctx = document.getElementById('mainTimeChart').getContext('2d');
 
-      // Respetar estrictamente el orden original de aparición en rawRows para las etiquetas del gráfico
+      // Obtener el orden exacto de aparición en rawRows (las filas tal como vienen del Sheet)
       const seen = new Set();
       const originalOrderedEquipos = [];
       rawRows.forEach(r => {
@@ -1564,7 +1565,7 @@
       const tbody = document.getElementById('reportTableBody');
       tbody.innerHTML = '';
 
-      // Mantener estrictamente el orden original de las filas (el orden de aparición en la hoja)
+      // Mantener estrictamente el orden original de las filas (el orden tal como está en el Sheet)
       const seen = new Set();
       const originalOrderedEquipos = [];
       rawRows.forEach(r => {
@@ -1579,11 +1580,7 @@
       const rowsToRender = orderedEquipos.map(eq => {
         const matches = activeData
           .filter(r => r.equipo.toLowerCase() === eq.toLowerCase())
-          .sort((a, b) => {
-            const tA = a.fechaObj ? a.fechaObj.getTime() : 0;
-            const tB = b.fechaObj ? b.fechaObj.getTime() : 0;
-            return tA !== tB ? tA - tB : a.rowIdx - b.rowIdx;
-          });
+          .sort((a, b) => a.rowIdx - b.rowIdx); // Respeta el orden secuencial por índice de fila original
 
         if (matches.length === 0) return null;
 
