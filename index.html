@@ -3,28 +3,37 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RESUMEN DE MAQUINARIA HORAS Y COMBUSTIBLE</title>
+  <title>CONTROL DE MAQUINARIA | CORPORATIVO</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <style>
     :root {
-      --bg: #f1f5f9;
+      --bg: #f8fafc;
       --surface: #ffffff;
-      --surface-hover: #f8fafc;
+      --surface-hover: #f1f5f9;
       --border: #e2e8f0;
-      --text: #0f172a;
+      --text: #1e293b;
       --text-muted: #64748b;
       --accent: #f59e0b;
       --accent-text: #0f172a;
-      --mtto-header-bg: #b45309;
+      
+      /* Paleta Corporativa Moderna */
+      --header-bg: #0f172a;
+      --header-text: #ffffff;
+      --th-bg: #f1f5f9;
+      --th-text: #334155;
+      --mtto-header-bg: #9a3412;
       --mtto-header-text: #ffffff;
-      --mtto-cell-bg: #dbeafe;
+      --mtto-cell-bg: #eff6ff;
       --badge-bg: #fef3c7;
       --badge-text: #b45309;
-      --badge-border: #fcd34d;
-      --danger: #dc2626;
-      --radius: 12px;
-      --shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+      --badge-border: #fde68a;
+      --danger-bg: #fef2f2;
+      --danger-text: #dc2626;
+      
+      --radius: 14px;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
     }
 
     * {
@@ -37,51 +46,54 @@
     body {
       background-color: var(--bg);
       color: var(--text);
-      padding: 20px;
-      line-height: 1.5;
+      padding: 24px;
+      line-height: 1.6;
     }
 
     .container {
-      max-width: 1440px;
+      max-width: 1480px;
       margin: 0 auto;
     }
 
-    /* Header */
+    /* Header Ejecutivo */
     header {
       display: flex;
       flex-wrap: wrap;
       justify-content: space-between;
       align-items: center;
       gap: 16px;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
+      margin-bottom: 28px;
+      padding-bottom: 20px;
       border-bottom: 1px solid var(--border);
     }
 
     header h1 {
-      font-size: 1.45rem;
-      font-weight: 700;
+      font-size: 1.5rem;
+      font-weight: 800;
       color: var(--text);
+      letter-spacing: -0.02em;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
     }
 
     header h1 span.badge {
-      background: #dcfce7;
-      color: #15803d;
-      font-size: 0.72rem;
+      background: #ecfdf5;
+      color: #059669;
+      font-size: 0.7rem;
       font-weight: 700;
       padding: 4px 10px;
       border-radius: 20px;
-      border: 1px solid #bbf7d0;
+      border: 1px solid #a7f3d0;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
     }
 
     .status-bar {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       font-size: 0.85rem;
       color: var(--text-muted);
     }
@@ -91,26 +103,27 @@
       background: var(--surface);
       color: var(--text);
       border: 1px solid var(--border);
-      padding: 8px 14px;
-      border-radius: 8px;
+      padding: 9px 16px;
+      border-radius: 10px;
       cursor: pointer;
       font-size: 0.85rem;
       font-weight: 600;
       box-shadow: var(--shadow);
-      transition: all 0.2s;
+      transition: all 0.2s ease;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
     }
 
     button.btn-refresh:hover {
       background: var(--surface-hover);
+      border-color: #cbd5e1;
     }
 
     button.btn-download {
-      background: #0f172a;
+      background: var(--header-bg);
       color: #ffffff;
-      border-color: #0f172a;
+      border-color: var(--header-bg);
     }
 
     button.btn-download:hover {
@@ -122,19 +135,18 @@
       cursor: wait;
     }
 
-    /* Botões discretos de descarga individual */
     .btn-mini-export {
-      background: #f8fafc;
-      color: #334155;
+      background: #f1f5f9;
+      color: #475569;
       border: 1px solid #cbd5e1;
-      padding: 5px 10px;
-      border-radius: 7px;
+      padding: 5px 12px;
+      border-radius: 8px;
       font-size: 0.75rem;
       font-weight: 700;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
       transition: all 0.2s;
     }
 
@@ -144,52 +156,52 @@
     }
 
     .btn-mini-export-dark {
-      background: rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.1);
       color: #f8fafc;
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      padding: 6px 12px;
-      border-radius: 7px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 6px 14px;
+      border-radius: 8px;
       font-size: 0.75rem;
       font-weight: 700;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      margin-right: 16px;
+      gap: 6px;
+      margin-right: 20px;
       align-self: center;
       white-space: nowrap;
       transition: all 0.2s;
     }
 
     .btn-mini-export-dark:hover {
-      background: rgba(255, 255, 255, 0.22);
+      background: rgba(255, 255, 255, 0.2);
     }
 
-    /* Controls & Filters */
+    /* Panel de Controles y Filtros Estilizado */
     .controls-panel {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
-      padding: 16px;
-      margin-bottom: 24px;
+      padding: 20px;
+      margin-bottom: 28px;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
       align-items: end;
     }
 
     .control-group {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
       position: relative;
     }
 
     .control-group label {
-      font-size: 0.75rem;
+      font-size: 0.73rem;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.08em;
       color: var(--text-muted);
       font-weight: 700;
     }
@@ -198,20 +210,22 @@
       background: #f8fafc;
       color: var(--text);
       border: 1px solid var(--border);
-      padding: 9px 12px;
-      border-radius: 8px;
+      padding: 10px 14px;
+      border-radius: 10px;
       font-size: 0.9rem;
       font-weight: 500;
       outline: none;
       cursor: pointer;
+      transition: all 0.2s;
     }
 
     select:focus {
       border-color: var(--accent);
       background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
     }
 
-    /* Dropdown Multiselect personalizado para Equipos */
+    /* Dropdown Multiselect */
     .multiselect-dropdown {
       position: relative;
       width: 100%;
@@ -222,8 +236,8 @@
       background: #f8fafc;
       color: var(--text);
       border: 1px solid var(--border);
-      padding: 9px 12px;
-      border-radius: 8px;
+      padding: 10px 14px;
+      border-radius: 10px;
       font-size: 0.9rem;
       font-weight: 500;
       text-align: left;
@@ -232,27 +246,29 @@
       justify-content: space-between;
       align-items: center;
       outline: none;
+      transition: all 0.2s;
     }
 
     .multiselect-btn:hover, .multiselect-btn:focus {
       border-color: var(--accent);
       background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
     }
 
     .multiselect-content {
       display: none;
       position: absolute;
-      top: calc(100% + 4px);
+      top: calc(100% + 6px);
       left: 0;
       width: 100%;
-      max-height: 280px;
+      max-height: 300px;
       overflow-y: auto;
       background: #ffffff;
       border: 1px solid var(--border);
-      border-radius: 8px;
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+      box-shadow: var(--shadow-lg);
       z-index: 100;
-      padding: 8px;
+      padding: 10px;
     }
 
     .multiselect-content.show {
@@ -263,12 +279,13 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 7px 10px;
+      padding: 8px 12px;
       font-size: 0.88rem;
       font-weight: 500;
       color: var(--text);
       cursor: pointer;
-      border-radius: 6px;
+      border-radius: 8px;
+      transition: background 0.15s;
     }
 
     .multiselect-item:hover {
@@ -278,23 +295,24 @@
     .multiselect-item-left {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
     }
 
     .multiselect-item input[type="checkbox"] {
       cursor: pointer;
       width: 16px;
       height: 16px;
-      accent-color: var(--accent);
+      accent-color: #0f172a;
+      border-radius: 4px;
     }
 
     .badge-sin-datos {
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       font-weight: 600;
-      color: #94a3b8;
+      color: #64748b;
       background: #f1f5f9;
-      padding: 2px 6px;
-      border-radius: 4px;
+      padding: 3px 8px;
+      border-radius: 6px;
       border: 1px solid #e2e8f0;
     }
 
@@ -302,7 +320,7 @@
       display: flex;
       background: #f1f5f9;
       padding: 4px;
-      border-radius: 8px;
+      border-radius: 10px;
       border: 1px solid var(--border);
     }
 
@@ -311,8 +329,8 @@
       background: transparent;
       border: none;
       color: var(--text-muted);
-      padding: 7px 10px;
-      border-radius: 6px;
+      padding: 8px 12px;
+      border-radius: 8px;
       font-size: 0.85rem;
       font-weight: 600;
       cursor: pointer;
@@ -320,16 +338,16 @@
     }
 
     .period-tabs button.active {
-      background: var(--accent);
-      color: var(--accent-text);
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+      background: #ffffff;
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      font-weight: 700;
     }
 
-    /* Contenedor exportable (Gráfico + Tabla) */
     #exportContainer {
       display: flex;
       flex-direction: column;
-      gap: 24px;
+      gap: 28px;
     }
 
     /* Chart Card */
@@ -338,7 +356,7 @@
       border: 1px solid var(--border);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
-      padding: 24px;
+      padding: 28px;
       display: flex;
       flex-direction: column;
     }
@@ -347,9 +365,9 @@
       display: grid;
       grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 22px;
-      padding-bottom: 14px;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
       border-bottom: 1px solid var(--border);
     }
 
@@ -362,10 +380,10 @@
       grid-column: 2;
       text-align: center;
       text-transform: uppercase;
-      font-size: 1.3rem;
+      font-size: 1.2rem;
       font-weight: 800;
       letter-spacing: 0.04em;
-      color: #0f172a;
+      color: var(--text);
     }
 
     .date-tag {
@@ -374,23 +392,10 @@
       background: var(--badge-bg);
       color: var(--badge-text);
       border: 1px solid var(--badge-border);
-      padding: 5px 14px;
+      padding: 6px 16px;
       border-radius: 20px;
       font-size: 0.85rem;
       font-weight: 700;
-      transition: all 0.2s;
-    }
-
-    @media (max-width: 820px) {
-      .chart-header {
-        display: flex;
-        flex-direction: column;
-        text-align: center;
-      }
-      .chart-header-left,
-      .date-tag {
-        justify-self: center;
-      }
     }
 
     .chart-wrapper {
@@ -399,7 +404,7 @@
       width: 100%;
     }
 
-    /* Report Table Card */
+    /* Tabla Corporativa Ultra Limpia */
     .table-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -411,24 +416,23 @@
     .table-top-banner {
       display: flex;
       align-items: stretch;
-      background: #1e293b;
-      color: #ffffff;
-      border-bottom: 2px solid #0f172a;
-      min-height: 68px;
+      background: var(--header-bg);
+      color: var(--header-text);
+      min-height: 72px;
     }
 
     .table-date-box {
-      background: #0f172a;
+      background: #020617;
       color: #ffffff;
-      font-size: 1.35rem;
+      font-size: 1.3rem;
       font-weight: 800;
-      padding: 20px 30px;
+      padding: 20px 32px;
       display: flex;
       align-items: center;
       justify-content: center;
-      border-right: 2px solid #334155;
+      border-right: 1px solid #1e293b;
       white-space: nowrap;
-      letter-spacing: 0.03em;
+      letter-spacing: 0.02em;
     }
 
     .table-banner-title {
@@ -438,29 +442,11 @@
       justify-content: center;
       text-align: center;
       padding: 20px 24px;
-      font-size: 1.18rem;
-      font-weight: 800;
-      letter-spacing: 0.04em;
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
       text-transform: uppercase;
-    }
-
-    @media (max-width: 768px) {
-      .table-top-banner {
-        flex-direction: column;
-        min-height: auto;
-      }
-      .table-date-box {
-        border-right: none;
-        border-bottom: 1px solid #334155;
-        padding: 14px 16px;
-      }
-      .table-banner-title {
-        padding: 14px 16px;
-        font-size: 1rem;
-      }
-      .btn-mini-export-dark {
-        margin: 0 0 12px 0;
-      }
+      color: #f8fafc;
     }
 
     .table-responsive {
@@ -470,35 +456,44 @@
 
     table.report-table {
       width: 100%;
-      border-collapse: collapse;
-      font-size: 0.87rem;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.88rem;
       min-width: 1240px;
     }
 
     table.report-table thead th {
-      background: var(--accent);
-      color: var(--accent-text);
-      font-weight: 800;
+      background: var(--th-bg);
+      color: var(--th-text);
+      font-weight: 700;
       text-transform: uppercase;
-      font-size: 0.74rem;
-      letter-spacing: 0.03em;
-      padding: 7px 10px;
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      padding: 12px 14px;
       text-align: center;
-      border: 1px solid rgba(15, 23, 42, 0.14);
-      line-height: 1.18;
-      transition: background 0.2s, color 0.2s;
+      border-bottom: 2px solid var(--border);
+      border-right: 1px solid var(--border);
+    }
+
+    table.report-table thead th:last-child {
+      border-right: none;
     }
 
     table.report-table thead th.th-mtto {
-      background: var(--mtto-header-bg);
-      color: var(--mtto-header-text);
+      background: #7c2d12;
+      color: #ffffff;
     }
 
     table.report-table tbody td {
-      padding: 9px 11px;
-      border: 1px solid #e2e8f0;
-      color: #0f172a;
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--border);
+      border-right: 1px solid #f1f5f9;
+      color: var(--text);
       vertical-align: middle;
+    }
+
+    table.report-table tbody td:last-child {
+      border-right: none;
     }
 
     table.report-table tbody tr:hover td:not(.td-mtto-normal):not(.td-mtto-overdue) {
@@ -506,16 +501,16 @@
     }
 
     .td-lugar {
-      font-weight: 700;
-      font-size: 0.8rem;
-      color: #334155;
+      font-weight: 600;
+      font-size: 0.82rem;
+      color: #475569;
       text-align: left;
       white-space: nowrap;
     }
 
     .td-operador {
-      font-weight: 600;
-      font-size: 0.82rem;
+      font-weight: 500;
+      font-size: 0.85rem;
       color: #1e293b;
       text-align: left;
       white-space: nowrap;
@@ -525,7 +520,7 @@
       text-align: left;
       white-space: nowrap;
       color: #0f172a;
-      font-weight: 500;
+      font-weight: 600;
     }
 
     .td-num {
@@ -533,55 +528,60 @@
       font-variant-numeric: tabular-nums;
       font-weight: 500;
       white-space: nowrap;
+      color: #334155;
     }
 
-    /* Mini barra horizontal dentro de TOTAL HORAS */
+    /* Mini barra de horas moderna y limpia */
     .hours-bar-cell {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      min-width: 105px;
+      gap: 10px;
+      min-width: 110px;
     }
 
     .hours-bar-track {
       flex: 1;
-      max-width: 68px;
-      height: 14px;
-      background: transparent;
+      max-width: 72px;
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
       display: flex;
       align-items: center;
     }
 
     .hours-bar-fill {
-      height: 14px;
-      background: var(--accent);
-      border-radius: 2px;
-      transition: width 0.25s ease, background 0.2s ease;
+      height: 8px;
+      background: #0f172a;
+      border-radius: 4px;
+      transition: width 0.3s ease;
     }
 
     .hours-bar-value {
       font-weight: 700;
       font-variant-numeric: tabular-nums;
-      min-width: 32px;
+      min-width: 36px;
       text-align: right;
+      color: #0f172a;
     }
 
-    /* Celda HORAS RESTANTES PARA MTTO */
+    /* Celdas de Mantenimiento */
     .td-mtto-normal {
       background-color: var(--mtto-cell-bg);
-      color: #0f172a;
+      color: #1e40af;
       text-align: center;
       font-weight: 600;
       white-space: nowrap;
     }
 
     .td-mtto-overdue {
-      background-color: #fee2e2;
-      color: #dc2626;
+      background-color: var(--danger-bg);
+      color: var(--danger-text);
       text-align: center;
-      font-weight: 800;
+      font-weight: 700;
       white-space: nowrap;
+      border-left: 3px solid #dc2626;
     }
 
     .td-comb {
@@ -593,8 +593,8 @@
 
     #loader {
       text-align: center;
-      padding: 40px;
-      color: #d97706;
+      padding: 60px;
+      color: var(--text-muted);
       font-weight: 600;
     }
 
@@ -602,10 +602,28 @@
       display: none;
       background: #fef2f2;
       border: 1px solid #fecaca;
-      color: var(--danger);
+      color: var(--danger-text);
       padding: 16px;
       border-radius: var(--radius);
       margin-bottom: 20px;
+    }
+
+    @media (max-width: 820px) {
+      .chart-header {
+        display: flex;
+        flex-direction: column;
+        text-align: center;
+      }
+      .chart-header-left, .date-tag {
+        justify-self: center;
+      }
+      .table-top-banner {
+        flex-direction: column;
+      }
+      .table-date-box {
+        border-right: none;
+        border-bottom: 1px solid #1e293b;
+      }
     }
   </style>
 </head>
@@ -613,12 +631,12 @@
   <div class="container">
     <header>
       <div>
-        <h1>Control de Maquinaria <span class="badge">EN VIVO</span></h1>
+        <h1>Control de Maquinaria <span class="badge">Ejecutivo</span></h1>
       </div>
       <div class="status-bar">
         <span id="lastUpdate">Cargando datos...</span>
         <button class="btn-refresh" onclick="fetchSheetData()">↻ Actualizar</button>
-        <button class="btn-download" id="btnDownloadAll" onclick="downloadSectionAsImage('exportContainer', 'Reporte_Completo_HD', this)">
+        <button class="btn-download" id="btnDownloadAll" onclick="downloadSectionAsImage('exportContainer', 'Reporte_Corporativo_HD', this)">
           📷 Descargar Imagen HD
         </button>
       </div>
@@ -628,7 +646,7 @@
     <div id="loader">Conectando con Google Sheets y procesando registros...</div>
 
     <div id="dashboardContent" style="display: none;">
-      <!-- Filtros: Vista Temporal + Selector Dinámico + Lugar + Selector Múltiple de Equipos -->
+      <!-- Panel de Controles -->
       <div class="controls-panel">
         <div class="control-group">
           <label>Vista Temporal</label>
@@ -650,16 +668,16 @@
         </div>
 
         <div class="control-group">
-          <label>Equipo (Orden de Flota - Múltiple)</label>
+          <label>Equipos (Flota Activa)</label>
           <div class="multiselect-dropdown" id="equipoMultiselect">
             <button type="button" class="multiselect-btn" onclick="toggleEquipoDropdown(event)">
               <span id="equipoBtnLabel">TODOS LOS EQUIPOS</span>
               <span>▼</span>
             </button>
             <div class="multiselect-content" id="equipoDropdownContent">
-              <label class="multiselect-item" style="border-bottom: 1px solid #e2e8f0; font-weight: 700; margin-bottom: 4px;">
+              <label class="multiselect-item" style="border-bottom: 1px solid #e2e8f0; font-weight: 700; margin-bottom: 6px;">
                 <div class="multiselect-item-left">
-                  <input type="checkbox" id="selectAllEquipos" onchange="toggleSelectAllEquipos(this)"> TODOS LOS EQUIPOS
+                  <input type="checkbox" id="selectAllEquipos" onchange="toggleSelectAllEquipos(this)"> SELECCIONAR TODOS
                 </div>
               </label>
               <div id="equipoCheckboxList"></div>
@@ -668,13 +686,13 @@
         </div>
       </div>
 
-      <!-- Contenedor unificado para exportar Gráfico + Tabla juntos como imagen HD -->
+      <!-- Contenedor Exportable -->
       <div id="exportContainer">
-        <!-- Gráfico Único -->
+        <!-- Gráfico -->
         <div class="chart-card" id="chartCardBlock">
           <div class="chart-header">
             <div class="chart-header-left" data-html2canvas-ignore="true">
-              <button class="btn-mini-export" onclick="downloadSectionAsImage('chartCardBlock', 'Grafico_Maquinaria_HD', this)" title="Descargar solo gráfico en HD">
+              <button class="btn-mini-export" onclick="downloadSectionAsImage('chartCardBlock', 'Grafico_Ejecutivo_HD', this)" title="Descargar solo gráfico en HD">
                 📷 PNG HD
               </button>
             </div>
@@ -686,14 +704,14 @@
           </div>
         </div>
 
-        <!-- Tabla Detallada debajo del gráfico -->
+        <!-- Tabla Estilizada Corporativa -->
         <div class="table-card" id="tableCardBlock">
           <div class="table-top-banner">
             <div class="table-date-box" id="tableScopeDate">-</div>
             <div class="table-banner-title" id="tableBannerTitle">
-              REPORTE DIARIO MAQUINARIA (HORAS, COMBUSTIBLE Y HORAS RESTANTES PARA MTTO)
+              REPORTE DIARIO MAQUINARIA (HORAS, COMBUSTIBLE Y MANTENIMIENTO)
             </div>
-            <button class="btn-mini-export-dark" data-html2canvas-ignore="true" onclick="downloadSectionAsImage('tableCardBlock', 'Tabla_Maquinaria_HD', this)" title="Descargar solo tabla en HD">
+            <button class="btn-mini-export-dark" data-html2canvas-ignore="true" onclick="downloadSectionAsImage('tableCardBlock', 'Tabla_Ejecutiva_HD', this)" title="Descargar solo tabla en HD">
               📷 PNG HD
             </button>
           </div>
@@ -728,63 +746,36 @@
     const PERIOD_THEMES = {
       daily: {
         title: 'RESUMEN DIARIO DE MAQUINARIA HORAS Y COMBUSTIBLE',
-        tableTitle: 'REPORTE DIARIO MAQUINARIA (HORAS, COMBUSTIBLE Y HORAS RESTANTES PARA MTTO)',
+        tableTitle: 'REPORTE DIARIO MAQUINARIA (HORAS, COMBUSTIBLE Y MANTENIMIENTO)',
         selectorLabel: 'FECHA',
-        flagColors: [
-          '#f59e0b', '#0d9488', '#ea580c', '#2563eb',
-          '#7c3aed', '#65a30d', '#e11d48', '#0891b2'
-        ],
-        axisLeftColor: '#d97706',
+        flagColors: ['#0f172a', '#0284c7', '#059669', '#d97706', '#7c3aed', '#db2777', '#0891b2', '#4f46e5'],
+        axisLeftColor: '#0f172a',
         lineColor: '#0284c7',
-        lineBg: 'rgba(2, 132, 199, 0.15)',
-        tabBg: '#f59e0b',
-        tabText: '#0f172a',
-        mttoHeaderBg: '#b45309',
-        mttoHeaderText: '#ffffff',
-        mttoCellBg: '#dbeafe',
-        badgeBg: '#fef3c7',
-        badgeText: '#b45309',
-        badgeBorder: '#fcd34d'
+        lineBg: 'rgba(2, 132, 199, 0.08)',
+        tabBg: '#0f172a',
+        tabText: '#ffffff'
       },
       weekly: {
         title: 'RESUMEN SEMANAL DE MAQUINARIA HORAS Y COMBUSTIBLE',
-        tableTitle: 'REPORTE SEMANAL MAQUINARIA (HORAS, COMBUSTIBLE Y HORAS RESTANTES PARA MTTO)',
+        tableTitle: 'REPORTE SEMANAL MAQUINARIA (HORAS, COMBUSTIBLE Y MANTENIMIENTO)',
         selectorLabel: 'SEMANA',
-        flagColors: [
-          '#10b981', '#f59e0b', '#4f46e5', '#e11d48',
-          '#06b6d4', '#f97316', '#8b5cf6', '#14b8a6'
-        ],
+        flagColors: ['#059669', '#0284c7', '#7c3aed', '#d97706', '#db2777', '#0f172a', '#4f46e5', '#0891b2'],
         axisLeftColor: '#059669',
         lineColor: '#6366f1',
-        lineBg: 'rgba(99, 102, 241, 0.15)',
-        tabBg: '#10b981',
-        tabText: '#ffffff',
-        mttoHeaderBg: '#065f46',
-        mttoHeaderText: '#ffffff',
-        mttoCellBg: '#d1fae5',
-        badgeBg: '#d1fae5',
-        badgeText: '#065f46',
-        badgeBorder: '#6ee7b7'
+        lineBg: 'rgba(99, 102, 241, 0.08)',
+        tabBg: '#059669',
+        tabText: '#ffffff'
       },
       monthly: {
         title: 'RESUMEN MENSUAL DE MAQUINARIA HORAS Y COMBUSTIBLE',
-        tableTitle: 'REPORTE MENSUAL MAQUINARIA (HORAS, COMBUSTIBLE Y HORAS RESTANTES PARA MTTO)',
+        tableTitle: 'REPORTE MENSUAL MAQUINARIA (HORAS, COMBUSTIBLE Y MANTENIMIENTO)',
         selectorLabel: 'MES',
-        flagColors: [
-          '#2563eb', '#f59e0b', '#059669', '#e11d48',
-          '#7c3aed', '#ea580c', '#0891b2', '#c026d3'
-        ],
-        axisLeftColor: '#1d4ed8',
+        flagColors: ['#2563eb', '#059669', '#d97706', '#7c3aed', '#db2777', '#0f172a', '#0891b2', '#4f46e5'],
+        axisLeftColor: '#2563eb',
         lineColor: '#e11d48',
-        lineBg: 'rgba(225, 29, 72, 0.15)',
+        lineBg: 'rgba(225, 29, 72, 0.08)',
         tabBg: '#2563eb',
-        tabText: '#ffffff',
-        mttoHeaderBg: '#1e3a8a',
-        mttoHeaderText: '#ffffff',
-        mttoCellBg: '#e0e7ff',
-        badgeBg: '#dbeafe',
-        badgeText: '#1e40af',
-        badgeBorder: '#93c5fd'
+        tabText: '#ffffff'
       }
     };
 
@@ -794,40 +785,19 @@
       'septiembre': 9, 'setiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
     };
 
-    // Orden lógico preferente de la flota para ordenamiento visual
     const ORDEN_PREFERENTE = [
-      'Excavadora 1 (336 D2L)',
-      'Excavadora 2 (320)',
-      'Excavadora 3 (336 DL)',
-      'Excavadora 4 (PC210 K)',
-      'Cargador F. (CAT)',
-      'Cargador F. (KOMATSU)',
-      'Retro Excavadora (Jhon Deere)',
-      'Retro Excavadora (Cat)',
-      'Tractor Oruga',
-      'Motoniveladora (GD555-5)',
-      'Rodillo 1 (CS533E CAT)',
-      'Rodillo 3 (CS533C CAT)',
-      'Mixer',
-      'Mini Cargador (Manitou)',
-      'Rodillo Rolas',
-      'Rodillo Neumático 3',
-      'Pavimentadora 2'
+      'Excavadora 1 (336 D2L)', 'Excavadora 2 (320)', 'Excavadora 3 (336 DL)', 'Excavadora 4 (PC210 K)',
+      'Cargador F. (CAT)', 'Cargador F. (KOMATSU)', 'Retro Excavadora (Jhon Deere)', 'Retro Excavadora (Cat)',
+      'Tractor Oruga', 'Motoniveladora (GD555-5)', 'Rodillo 1 (CS533E CAT)', 'Rodillo 3 (CS533C CAT)',
+      'Mixer', 'Mini Cargador (Manitou)', 'Rodillo Rolas', 'Rodillo Neumático 3', 'Pavimentadora 2'
     ];
 
     function cleanSpaces(str) {
-      return String(str || '')
-        .replace(/[\u00A0\u200B-\u200D\uFEFF]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
+      return String(str || '').replace(/[\u00A0\u200B-\u200D\uFEFF]/g, ' ').replace(/\s+/g, ' ').trim();
     }
 
-    const ORDEN_MAP = new Map(
-      ORDEN_PREFERENTE.map((nombre, index) => [cleanSpaces(nombre).toLowerCase(), index])
-    );
+    const ORDEN_MAP = new Map(ORDEN_PREFERENTE.map((nombre, index) => [cleanSpaces(nombre).toLowerCase(), index]));
 
-    // FUNCIÓN CORREGIDA: Toma exactamente el nombre de la Columna H (con su formato limpio),
-    // sin forzar ni reemplazar nombres por otros.
     function getExactEquipoName(rawName) {
       const clean = cleanSpaces(rawName);
       return clean ? clean : 'Sin Especificar';
@@ -861,40 +831,18 @@
         const next = text[i + 1];
 
         if (inQuotes) {
-          if (ch === '"' && next === '"') {
-            cur += '"';
-            i++;
-          } else if (ch === '"') {
-            inQuotes = false;
-          } else {
-            cur += ch;
-          }
+          if (ch === '"' && next === '"') { cur += '"'; i++; }
+          else if (ch === '"') { inQuotes = false; }
+          else { cur += ch; }
         } else {
-          if (ch === '"') {
-            inQuotes = true;
-          } else if (ch === ',') {
-            row.push(cur);
-            cur = '';
-          } else if (ch === '\r' && next === '\n') {
-            row.push(cur);
-            rows.push(row);
-            row = [];
-            cur = '';
-            i++;
-          } else if (ch === '\n' || ch === '\r') {
-            row.push(cur);
-            rows.push(row);
-            row = [];
-            cur = '';
-          } else {
-            cur += ch;
-          }
+          if (ch === '"') { inQuotes = true; }
+          else if (ch === ',') { row.push(cur); cur = ''; }
+          else if (ch === '\r' && next === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; i++; }
+          else if (ch === '\n' || ch === '\r') { row.push(cur); rows.push(row); row = []; cur = ''; }
+          else { cur += ch; }
         }
       }
-      if (cur.length > 0 || row.length > 0) {
-        row.push(cur);
-        rows.push(row);
-      }
+      if (cur.length > 0 || row.length > 0) { row.push(cur); rows.push(row); }
       return rows;
     }
 
@@ -902,13 +850,8 @@
       if (val === null || val === undefined) return 0;
       let str = cleanSpaces(val);
       if (!str) return 0;
-
-      if (str.includes('.') && str.includes(',')) {
-        str = str.replace(/\./g, '').replace(',', '.');
-      } else {
-        str = str.replace(',', '.');
-      }
-
+      if (str.includes('.') && str.includes(',')) { str = str.replace(/\./g, '').replace(',', '.'); }
+      else { str = str.replace(',', '.'); }
       const match = str.match(/-?\d+(\.\d+)?/);
       if (!match) return 0;
       const num = parseFloat(match[0]);
@@ -923,9 +866,7 @@
         const d = parseInt(parts[0], 10);
         const m = parseInt(parts[1], 10) - 1;
         const y = parseInt(parts[2], 10);
-        if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
-          return new Date(y, m, d);
-        }
+        if (!isNaN(d) && !isNaN(m) && !isNaN(y)) return new Date(y, m, d);
       }
       return null;
     }
@@ -960,9 +901,7 @@
         const csvText = await res.text();
         const matrix = parseCSV(csvText);
 
-        if (matrix.length < 2) {
-          throw new Error('La hoja no contiene suficientes filas.');
-        }
+        if (matrix.length < 2) throw new Error('La hoja no contiene suficientes filas.');
 
         rawRows = matrix.slice(1).map((cols, rowIdx) => {
           const getCol = (idx) => cleanSpaces(cols[idx] || '');
@@ -986,7 +925,7 @@
             fechaStr: formatDateES(fechaObj),
             codigo: getCol(5),
             operador: getCol(6),
-            equipo: getExactEquipoName(getCol(7)), // Columna H exacta
+            equipo: getExactEquipoName(getCol(7)),
             hIniRaw: hIniRaw,
             hInicial: hIniRaw !== '' ? parseNum(hIniRaw) : null,
             hFinRaw: hFinRaw,
@@ -1012,7 +951,7 @@
       } catch (err) {
         loader.style.display = 'none';
         errorBox.style.display = 'block';
-        errorBox.innerHTML = `<strong>Error al cargar Google Sheets:</strong> ${err.message}.<br>Verifica que la hoja tenga permisos de lectura.`;
+        errorBox.innerHTML = `<strong>Error al cargar Google Sheets:</strong> ${err.message}.`;
       }
     }
 
@@ -1040,34 +979,21 @@
         periodFilteredData = rawRows.filter(r => r.fechaISO === selectedTemporal);
       } else if (currentPeriod === 'weekly') {
         const [targetAnio, targetSem] = selectedTemporal.split('||');
-        periodFilteredData = rawRows.filter(r =>
-          cleanSpaces(r.sem) === cleanSpaces(targetSem) &&
-          (!targetAnio || !r.anio || r.anio === targetAnio)
-        );
+        periodFilteredData = rawRows.filter(r => cleanSpaces(r.sem) === cleanSpaces(targetSem) && (!targetAnio || !r.anio || r.anio === targetAnio));
       } else {
         const [targetAnio, targetMesLower] = selectedTemporal.split('||');
-        periodFilteredData = rawRows.filter(r =>
-          cleanSpaces(r.mes).toLowerCase() === cleanSpaces(targetMesLower).toLowerCase() &&
-          (!targetAnio || !r.anio || r.anio === targetAnio)
-        );
+        periodFilteredData = rawRows.filter(r => cleanSpaces(r.mes).toLowerCase() === cleanSpaces(targetMesLower).toLowerCase() && (!targetAnio || !r.anio || r.anio === targetAnio));
       }
 
       if (selectedLugar !== 'ALL') {
         periodFilteredData = periodFilteredData.filter(r => r.lugar === selectedLugar);
       }
 
-      const activeEquiposInPeriod = new Set(
-        periodFilteredData.filter(r => r.totalHoras > 0).map(r => r.equipo)
-      );
-
-      const currentChecked = new Set(
-        [...document.querySelectorAll('.equipo-chk:checked')].map(c => c.value)
-      );
+      const activeEquiposInPeriod = new Set(periodFilteredData.filter(r => r.totalHoras > 0).map(r => r.equipo));
+      const currentChecked = new Set([...document.querySelectorAll('.equipo-chk:checked')].map(c => c.value));
       const isFirstRender = currentChecked.size === 0;
 
-      // Extraer dinámicamente todos los equipos únicos de la columna H en todo el archivo
       const allEquiposList = [...new Set(rawRows.map(r => r.equipo))].filter(Boolean).sort(compareEquipos);
-
       const container = document.getElementById('equipoCheckboxList');
       container.innerHTML = '';
 
@@ -1094,8 +1020,7 @@
 
     function toggleEquipoDropdown(e) {
       e.stopPropagation();
-      const content = document.getElementById('equipoDropdownContent');
-      content.classList.toggle('show');
+      document.getElementById('equipoDropdownContent').classList.toggle('show');
     }
 
     window.addEventListener('click', (e) => {
@@ -1106,23 +1031,20 @@
     });
 
     function toggleSelectAllEquipos(masterChk) {
-      const chks = document.querySelectorAll('.equipo-chk');
-      chks.forEach(chk => chk.checked = masterChk.checked);
+      document.querySelectorAll('.equipo-chk').forEach(chk => chk.checked = masterChk.checked);
       updateEquipoButtonLabel();
       updateDashboard();
     }
 
     function onEquipoCheckboxChange() {
       const chks = document.querySelectorAll('.equipo-chk');
-      const allChecked = [...chks].every(c => c.checked);
-      document.getElementById('selectAllEquipos').checked = allChecked;
+      document.getElementById('selectAllEquipos').checked = [...chks].every(c => c.checked);
       updateEquipoButtonLabel();
       updateDashboard();
     }
 
     function getSelectedEquipos() {
-      const chks = document.querySelectorAll('.equipo-chk:checked');
-      return [...chks].map(c => c.value);
+      return [...document.querySelectorAll('.equipo-chk:checked')].map(c => c.value);
     }
 
     function updateEquipoButtonLabel() {
@@ -1149,13 +1071,8 @@
 
       if (currentPeriod === 'daily') {
         const dateMap = new Map();
-        rawRows.forEach(r => {
-          if (r.fechaISO && !dateMap.has(r.fechaISO)) {
-            dateMap.set(r.fechaISO, r.fechaStr);
-          }
-        });
-        const sortedDates = [...dateMap.entries()].sort((a, b) => b[0].localeCompare(a[0]));
-        sortedDates.forEach(([iso, str], idx) => {
+        rawRows.forEach(r => { if (r.fechaISO && !dateMap.has(r.fechaISO)) dateMap.set(r.fechaISO, r.fechaStr); });
+        [...dateMap.entries()].sort((a, b) => b[0].localeCompare(a[0])).forEach(([iso, str], idx) => {
           const opt = document.createElement('option');
           opt.value = iso;
           opt.textContent = idx === 0 ? `${str} (Última)` : str;
@@ -1167,18 +1084,10 @@
           if (!r.sem) return;
           const key = `${r.anio}||${r.sem}`;
           if (!weekMap.has(key)) {
-            const semNum = parseInt(String(r.sem).replace(/\D/g, ''), 10) || 0;
-            const anioNum = parseInt(r.anio, 10) || 0;
-            weekMap.set(key, {
-              key,
-              anio: r.anio,
-              sem: r.sem,
-              sortWeight: anioNum * 100 + semNum
-            });
+            weekMap.set(key, { key, anio: r.anio, sem: r.sem, sortWeight: (parseInt(r.anio, 10) || 0) * 100 + (parseInt(String(r.sem).replace(/\D/g, ''), 10) || 0) });
           }
         });
-        const sortedWeeks = [...weekMap.values()].sort((a, b) => b.sortWeight - a.sortWeight);
-        sortedWeeks.forEach((w, idx) => {
+        [...weekMap.values()].sort((a, b) => b.sortWeight - a.sortWeight).forEach((w, idx) => {
           const opt = document.createElement('option');
           opt.value = w.key;
           const baseText = `Semana ${w.sem}${w.anio ? ' - ' + w.anio : ''}`;
@@ -1192,18 +1101,11 @@
           const mesLower = cleanSpaces(r.mes).toLowerCase();
           const key = `${r.anio}||${mesLower}`;
           if (!monthMap.has(key)) {
-            const mNum = MESES_ORDEN[mesLower] || 0;
-            const anioNum = parseInt(r.anio, 10) || 0;
             const mesCap = r.mes.charAt(0).toUpperCase() + r.mes.slice(1).toLowerCase();
-            monthMap.set(key, {
-              key,
-              label: `${mesCap}${r.anio ? ' ' + r.anio : ''}`,
-              sortWeight: anioNum * 100 + mNum
-            });
+            monthMap.set(key, { key, label: `${mesCap}${r.anio ? ' ' + r.anio : ''}`, sortWeight: (parseInt(r.anio, 10) || 0) * 100 + (MESES_ORDEN[mesLower] || 0) });
           }
         });
-        const sortedMonths = [...monthMap.values()].sort((a, b) => b.sortWeight - a.sortWeight);
-        sortedMonths.forEach((m, idx) => {
+        [...monthMap.values()].sort((a, b) => b.sortWeight - a.sortWeight).forEach((m, idx) => {
           const opt = document.createElement('option');
           opt.value = m.key;
           opt.textContent = idx === 0 ? `${m.label} (Último)` : m.label;
@@ -1211,28 +1113,12 @@
         });
       }
 
-      if (prevValue && [...sel.options].some(o => o.value === prevValue)) {
-        sel.value = prevValue;
-      } else if (sel.options.length > 0) {
-        sel.selectedIndex = 0;
-      }
-    }
-
-    function applyThemeColors(theme) {
-      document.documentElement.style.setProperty('--accent', theme.tabBg);
-      document.documentElement.style.setProperty('--accent-text', theme.tabText);
-      document.documentElement.style.setProperty('--mtto-header-bg', theme.mttoHeaderBg);
-      document.documentElement.style.setProperty('--mtto-header-text', theme.mttoHeaderText);
-      document.documentElement.style.setProperty('--mtto-cell-bg', theme.mttoCellBg);
-      document.documentElement.style.setProperty('--badge-bg', theme.badgeBg);
-      document.documentElement.style.setProperty('--badge-text', theme.badgeText);
-      document.documentElement.style.setProperty('--badge-border', theme.badgeBorder);
+      if (prevValue && [...sel.options].some(o => o.value === prevValue)) sel.value = prevValue;
+      else if (sel.options.length > 0) sel.selectedIndex = 0;
     }
 
     function updateDashboard() {
       const theme = PERIOD_THEMES[currentPeriod];
-      applyThemeColors(theme);
-
       const selectedTemporal = document.getElementById('filterTemporal').value;
       const selectedLugar = document.getElementById('filterLugar').value;
       const selectedEquiposArr = getSelectedEquipos();
@@ -1248,17 +1134,11 @@
         scopeLabel = ref ? ref.fechaStr : selectedTemporal;
       } else if (currentPeriod === 'weekly') {
         const [targetAnio, targetSem] = selectedTemporal.split('||');
-        activeData = rawRows.filter(r =>
-          cleanSpaces(r.sem) === cleanSpaces(targetSem) &&
-          (!targetAnio || !r.anio || r.anio === targetAnio)
-        );
+        activeData = rawRows.filter(r => cleanSpaces(r.sem) === cleanSpaces(targetSem) && (!targetAnio || !r.anio || r.anio === targetAnio));
         scopeLabel = `Semana ${targetSem}${targetAnio ? ' - ' + targetAnio : ''}`;
       } else {
         const [targetAnio, targetMesLower] = selectedTemporal.split('||');
-        activeData = rawRows.filter(r =>
-          cleanSpaces(r.mes).toLowerCase() === cleanSpaces(targetMesLower).toLowerCase() &&
-          (!targetAnio || !r.anio || r.anio === targetAnio)
-        );
+        activeData = rawRows.filter(r => cleanSpaces(r.mes).toLowerCase() === cleanSpaces(targetMesLower).toLowerCase() && (!targetAnio || !r.anio || r.anio === targetAnio));
         const mesCap = targetMesLower ? targetMesLower.charAt(0).toUpperCase() + targetMesLower.slice(1) : '-';
         scopeLabel = `${mesCap}${targetAnio ? ' ' + targetAnio : ''}`;
       }
@@ -1275,44 +1155,26 @@
       document.getElementById('tableBannerTitle').textContent = theme.tableTitle;
 
       renderMainChart(activeData, theme, selectedEquiposArr);
-      renderReportTable(activeData, selectedEquiposArr, selectedLugar);
+      renderReportTable(activeData, selectedEquiposArr);
     }
 
     function drawPillBadge(ctx, text, centerX, centerY, bgColor, textColor, borderColor = '#ffffff') {
       ctx.save();
       ctx.font = '800 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      const padX = 7;
-      const height = 20;
-      const textWidth = ctx.measureText(text).width;
-      const width = textWidth + padX * 2;
-      const x = centerX - width / 2;
-      const y = centerY - height / 2;
-      const r = 6;
+      const padX = 8, height = 20, width = ctx.measureText(text).width + padX * 2;
+      const x = centerX - width / 2, y = centerY - height / 2, r = 6;
 
       ctx.beginPath();
-      ctx.moveTo(x + r, y);
-      ctx.lineTo(x + width - r, y);
+      ctx.moveTo(x + r, y); ctx.lineTo(x + width - r, y);
       ctx.quadraticCurveTo(x + width, y, x + width, y + r);
-      ctx.lineTo(x + width, y + height - r);
-      ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
-      ctx.lineTo(x + r, y + height);
-      ctx.quadraticCurveTo(x, y + height, x, y + height - r);
-      ctx.lineTo(x, y + r);
-      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.lineTo(x + width, y + height - r); ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+      ctx.lineTo(x + r, y + height); ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+      ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
       ctx.closePath();
 
-      ctx.fillStyle = bgColor;
-      ctx.fill();
-
-      if (borderColor) {
-        ctx.strokeStyle = borderColor;
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-      }
-
-      ctx.fillStyle = textColor;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+      ctx.fillStyle = bgColor; ctx.fill();
+      if (borderColor) { ctx.strokeStyle = borderColor; ctx.lineWidth = 1.5; ctx.stroke(); }
+      ctx.fillStyle = textColor; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(text, centerX, centerY + 0.5);
       ctx.restore();
     }
@@ -1323,25 +1185,20 @@
         const { ctx } = chart;
         const theme = PERIOD_THEMES[currentPeriod];
         const numCategories = chart.data.labels.length;
-
         const barBadgeYMap = new Array(numCategories).fill(null);
 
         for (let i = 0; i < numCategories; i++) {
-          let topY = Infinity;
-          let totalH = 0;
+          let topY = Infinity, totalH = 0;
           const activeSegments = [];
 
           chart.data.datasets.forEach((dataset, dsIndex) => {
             if (dataset.type === 'line') return;
             const meta = chart.getDatasetMeta(dsIndex);
             if (meta.hidden) return;
-
             const val = Number(dataset.data[i] || 0);
             if (val <= 0) return;
-
             const el = meta.data[i];
             if (!el) return;
-
             totalH += val;
             if (el.y < topY) topY = el.y;
             activeSegments.push({ val, el });
@@ -1349,20 +1206,14 @@
 
           if (activeSegments.length > 1) {
             activeSegments.forEach(({ val, el }) => {
-              const segHeight = Math.abs(el.base - el.y);
-              if (segHeight >= 15) {
+              if (Math.abs(el.base - el.y) >= 15) {
                 const segCenterY = (el.base + el.y) / 2;
                 const horasStr = `${Number.isInteger(val) ? val : val.toFixed(1)}h`;
                 ctx.save();
                 ctx.font = '800 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.lineJoin = 'round';
-                ctx.strokeStyle = 'rgba(15, 23, 42, 0.88)';
-                ctx.lineWidth = 3;
-                ctx.fillStyle = '#ffffff';
-                ctx.strokeText(horasStr, el.x, segCenterY);
-                ctx.fillText(horasStr, el.x, segCenterY);
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.strokeStyle = 'rgba(15, 23, 42, 0.88)'; ctx.lineWidth = 3; ctx.fillStyle = '#ffffff';
+                ctx.strokeText(horasStr, el.x, segCenterY); ctx.fillText(horasStr, el.x, segCenterY);
                 ctx.restore();
               }
             });
@@ -1372,9 +1223,7 @@
             const xPos = chart.scales.x.getPixelForValue(i);
             const barBadgeY = Math.max(38, topY - 14);
             barBadgeYMap[i] = barBadgeY;
-
-            const totalStr = `${Number.isInteger(totalH) ? totalH : totalH.toFixed(1)} h`;
-            drawPillBadge(ctx, totalStr, xPos, barBadgeY, '#0f172a', '#ffffff', '#ffffff');
+            drawPillBadge(ctx, `${Number.isInteger(totalH) ? totalH : totalH.toFixed(1)} h`, xPos, barBadgeY, '#0f172a', '#ffffff', '#ffffff');
           }
         }
 
@@ -1382,20 +1231,13 @@
           if (dataset.type !== 'line') return;
           const meta = chart.getDatasetMeta(dsIndex);
           if (meta.hidden) return;
-
           meta.data.forEach((el, i) => {
             const val = Number(dataset.data[i] || 0);
             if (val <= 0) return;
-
-            const fuelStr = `${Number.isInteger(val) ? val : val.toFixed(1)} Gal`;
-            const barBadgeY = barBadgeYMap[i];
             let fuelY = Math.max(13, el.y - 16);
-
-            if (barBadgeY !== null && Math.abs(fuelY - barBadgeY) < 25) {
-              fuelY = Math.max(13, barBadgeY - 25);
-            }
-
-            drawPillBadge(ctx, fuelStr, el.x, fuelY, theme.lineColor, '#ffffff', '#ffffff');
+            const barBadgeY = barBadgeYMap[i];
+            if (barBadgeY !== null && Math.abs(fuelY - barBadgeY) < 25) fuelY = Math.max(13, barBadgeY - 25);
+            drawPillBadge(ctx, `${Number.isInteger(val) ? val : val.toFixed(1)} Gal`, el.x, fuelY, theme.lineColor, '#ffffff', '#ffffff');
           });
         });
       }
@@ -1410,21 +1252,12 @@
       const orderedEquipos = allUniqueEquipos.filter(eq => selectedEquiposArr.includes(eq) && activeEquiposSet.has(eq));
 
       const activeLugaresSet = new Set();
-      activeData.forEach(r => {
-        if (r.totalHoras > 0) activeLugaresSet.add(r.lugar);
-      });
-
-      const lugaresList = activeLugaresSet.size > 0
-        ? allLugares.filter(l => activeLugaresSet.has(l))
-        : (allLugares.length > 0 ? [allLugares[0]] : ['SIN DATA']);
+      activeData.forEach(r => { if (r.totalHoras > 0) activeLugaresSet.add(r.lugar); });
+      const lugaresList = activeLugaresSet.size > 0 ? allLugares.filter(l => activeLugaresSet.has(l)) : (allLugares.length > 0 ? [allLugares[0]] : ['SIN DATA']);
 
       const hoursByEquipoLugar = new Map();
       const combByEquipo = new Map();
-
-      orderedEquipos.forEach(eq => {
-        hoursByEquipoLugar.set(eq, new Map());
-        combByEquipo.set(eq, 0);
-      });
+      orderedEquipos.forEach(eq => { hoursByEquipoLugar.set(eq, new Map()); combByEquipo.set(eq, 0); });
 
       activeData.forEach(r => {
         const eq = r.equipo;
@@ -1435,23 +1268,17 @@
         }
       });
 
-      const barDatasets = lugaresList.map((lugar, idx) => {
-        const color = theme.flagColors[idx % theme.flagColors.length];
-        return {
-          label: lugar,
-          data: orderedEquipos.map(eq => {
-            const val = hoursByEquipoLugar.get(eq)?.get(lugar) || 0;
-            return Number(val.toFixed(1));
-          }),
-          backgroundColor: color,
-          borderColor: '#ffffff',
-          borderWidth: 1.5,
-          borderRadius: 4,
-          stack: 'horas',
-          order: 2,
-          yAxisID: 'y'
-        };
-      });
+      const barDatasets = lugaresList.map((lugar, idx) => ({
+        label: lugar,
+        data: orderedEquipos.map(eq => Number((hoursByEquipoLugar.get(eq)?.get(lugar) || 0).toFixed(1))),
+        backgroundColor: theme.flagColors[idx % theme.flagColors.length],
+        borderColor: '#ffffff',
+        borderWidth: 1.5,
+        borderRadius: 6,
+        stack: 'horas',
+        order: 2,
+        yAxisID: 'y'
+      }));
 
       const fuelDataset = {
         label: 'Combustible Abastecido (Gal)',
@@ -1460,7 +1287,7 @@
         borderColor: theme.lineColor,
         backgroundColor: theme.lineBg,
         borderWidth: 3,
-        borderDash: [10, 6],
+        borderDash: [8, 6],
         tension: 0.35,
         pointRadius: 5,
         pointHoverRadius: 7,
@@ -1475,10 +1302,7 @@
       charts.main = new Chart(ctx, {
         type: 'bar',
         plugins: [flagAndLabelsPlugin],
-        data: {
-          labels: orderedEquipos,
-          datasets: [...barDatasets, fuelDataset]
-        },
+        data: { labels: orderedEquipos, datasets: [...barDatasets, fuelDataset] },
         options: {
           responsive: true,
           maintainAspectRatio: false,
@@ -1488,13 +1312,11 @@
             legend: {
               position: 'bottom',
               labels: {
-                color: '#0f172a',
-                font: { size: 12.5, weight: '700' },
+                color: '#1e293b',
+                font: { size: 12, weight: '700' },
                 padding: 20,
                 usePointStyle: true,
-                filter(legendItem, chartData) {
-                  return chartData.datasets[legendItem.datasetIndex].type !== 'line';
-                }
+                filter(item, data) { return data.datasets[item.datasetIndex].type !== 'line'; }
               }
             },
             tooltip: {
@@ -1505,16 +1327,12 @@
               callbacks: {
                 label(context) {
                   const val = context.parsed.y || 0;
-                  if (context.dataset.type === 'line') {
-                    return ` Combustible Abastecido: ${val.toFixed(1)} Gal`;
-                  }
+                  if (context.dataset.type === 'line') return ` Combustible Abastecido: ${val.toFixed(1)} Gal`;
                   if (val <= 0) return null;
                   return ` ${context.dataset.label}: ${val.toFixed(1)} h`;
                 },
-                footer(tooltipItems) {
-                  const totalH = tooltipItems
-                    .filter(item => item.dataset.type !== 'line')
-                    .reduce((sum, item) => sum + (item.parsed.y || 0), 0);
+                footer(items) {
+                  const totalH = items.filter(i => i.dataset.type !== 'line').reduce((s, i) => s + (i.parsed.y || 0), 0);
                   return totalH > 0 ? `Total Horas Equipo: ${totalH.toFixed(1)} h` : '';
                 }
               }
@@ -1523,50 +1341,19 @@
           scales: {
             x: {
               stacked: true,
-              ticks: {
-                color: '#0f172a',
-                font: { size: 11, weight: '600' },
-                autoSkip: false,
-                maxRotation: 45,
-                minRotation: 30
-              },
-              grid: { color: 'rgba(148, 163, 184, 0.25)' }
+              ticks: { color: '#334155', font: { size: 11, weight: '600' }, autoSkip: false, maxRotation: 45, minRotation: 30 },
+              grid: { color: 'rgba(226, 232, 240, 0.6)' }
             },
             y: {
-              type: 'linear',
-              position: 'left',
-              stacked: true,
-              beginAtZero: true,
-              grace: '20%',
-              title: {
-                display: true,
-                text: 'Horas (h)',
-                color: theme.axisLeftColor,
-                font: { size: 15, weight: '800' },
-                padding: { bottom: 8 }
-              },
-              ticks: {
-                color: '#1e293b',
-                font: { size: 13, weight: '700' }
-              },
-              grid: { color: 'rgba(148, 163, 184, 0.25)' }
+              type: 'linear', position: 'left', stacked: true, beginAtZero: true, grace: '20%',
+              title: { display: true, text: 'Horas (h)', color: '#0f172a', font: { size: 14, weight: '800' }, padding: { bottom: 8 } },
+              ticks: { color: '#334155', font: { size: 12, weight: '700' } },
+              grid: { color: 'rgba(226, 232, 240, 0.6)' }
             },
             y1: {
-              type: 'linear',
-              position: 'right',
-              beginAtZero: true,
-              grace: '20%',
-              title: {
-                display: true,
-                text: 'Combustible (Gal)',
-                color: theme.lineColor,
-                font: { size: 15, weight: '800' },
-                padding: { bottom: 8 }
-              },
-              ticks: {
-                color: '#1e293b',
-                font: { size: 13, weight: '700' }
-              },
+              type: 'linear', position: 'right', beginAtZero: true, grace: '20%',
+              title: { display: true, text: 'Combustible (Gal)', color: theme.lineColor, font: { size: 14, weight: '800' }, padding: { bottom: 8 } },
+              ticks: { color: '#334155', font: { size: 12, weight: '700' } },
               grid: { drawOnChartArea: false }
             }
           }
@@ -1575,7 +1362,7 @@
     }
 
     function formatUnidadHTML(name) {
-      return String(name).replace(/\(([^)]+)\)/g, '<strong>($1)</strong>');
+      return String(name).replace(/\(([^)]+)\),/g, '<strong>($1)</strong>');
     }
 
     function formatHorometro(val) {
@@ -1583,7 +1370,7 @@
       return Number.isInteger(val) ? String(val) : val.toFixed(1);
     }
 
-    function renderReportTable(activeData, selectedEquiposArr, selectedLugar) {
+    function renderReportTable(activeData, selectedEquiposArr) {
       const tbody = document.getElementById('reportTableBody');
       tbody.innerHTML = '';
 
@@ -1591,13 +1378,10 @@
       const orderedEquipos = allUniqueEquipos.filter(eq => selectedEquiposArr.includes(eq));
 
       const rowsToRender = orderedEquipos.map(eq => {
-        const matches = activeData
-          .filter(r => r.equipo.toLowerCase() === eq.toLowerCase())
-          .sort((a, b) => {
-            const tA = a.fechaObj ? a.fechaObj.getTime() : 0;
-            const tB = b.fechaObj ? b.fechaObj.getTime() : 0;
-            return tA !== tB ? tA - tB : a.rowIdx - b.rowIdx;
-          });
+        const matches = activeData.filter(r => r.equipo.toLowerCase() === eq.toLowerCase()).sort((a, b) => {
+          const tA = a.fechaObj ? a.fechaObj.getTime() : 0, tB = b.fechaObj ? b.fechaObj.getTime() : 0;
+          return tA !== tB ? tA - tB : a.rowIdx - b.rowIdx;
+        });
 
         if (matches.length === 0) return null;
 
@@ -1606,9 +1390,7 @@
 
         const operatedWithOp = matches.filter(m => m.totalHoras > 0 && cleanSpaces(m.operador) !== '');
         const allValidOps = matches.map(m => cleanSpaces(m.operador)).filter(Boolean);
-        const operadorStr = operatedWithOp.length > 0
-          ? cleanSpaces(operatedWithOp[operatedWithOp.length - 1].operador)
-          : (allValidOps.length > 0 ? allValidOps[allValidOps.length - 1] : '-');
+        const operadorStr = operatedWithOp.length > 0 ? cleanSpaces(operatedWithOp[operatedWithOp.length - 1].operador) : (allValidOps.length > 0 ? allValidOps[allValidOps.length - 1] : '-');
 
         const validHIni = matches.filter(m => m.hInicial !== null);
         const validHFin = matches.filter(m => m.hFinal !== null);
@@ -1625,16 +1407,9 @@
         const lastCombRest = validCombRest.length > 0 ? validCombRest[validCombRest.length - 1] : null;
 
         return {
-          lugar: lugarStr,
-          operador: operadorStr,
-          unidad: eq,
-          hInicial,
-          hFinal,
-          totalHoras,
-          mttoRaw: lastMtto ? lastMtto.mttoRaw : '',
-          mttoNum: lastMtto ? lastMtto.horasRestantesMtto : null,
-          combustible,
-          combRestNum: lastCombRest ? lastCombRest.horasRestantesComb : null
+          lugar: lugarStr, operador: operadorStr, unidad: eq, hInicial, hFinal, totalHoras,
+          mttoRaw: lastMtto ? lastMtto.mttoRaw : '', mttoNum: lastMtto ? lastMtto.horasRestantesMtto : null,
+          combustible, combRestNum: lastCombRest ? lastCombRest.horasRestantesComb : null
         };
       }).filter(Boolean);
 
@@ -1643,30 +1418,11 @@
       rowsToRender.forEach(item => {
         const tr = document.createElement('tr');
 
-        const tdLugar = document.createElement('td');
-        tdLugar.className = 'td-lugar';
-        tdLugar.textContent = item.lugar;
-        tr.appendChild(tdLugar);
-
-        const tdOperador = document.createElement('td');
-        tdOperador.className = 'td-operador';
-        tdOperador.textContent = item.operador;
-        tr.appendChild(tdOperador);
-
-        const tdUnidad = document.createElement('td');
-        tdUnidad.className = 'td-unidad';
-        tdUnidad.innerHTML = formatUnidadHTML(item.unidad);
-        tr.appendChild(tdUnidad);
-
-        const tdHIni = document.createElement('td');
-        tdHIni.className = 'td-num';
-        tdHIni.textContent = formatHorometro(item.hInicial);
-        tr.appendChild(tdHIni);
-
-        const tdHFin = document.createElement('td');
-        tdHFin.className = 'td-num';
-        tdHFin.textContent = formatHorometro(item.hFinal);
-        tr.appendChild(tdHFin);
+        const tdLugar = document.createElement('td'); tdLugar.className = 'td-lugar'; tdLugar.textContent = item.lugar; tr.appendChild(tdLugar);
+        const tdOperador = document.createElement('td'); tdOperador.className = 'td-operador'; tdOperador.textContent = item.operador; tr.appendChild(tdOperador);
+        const tdUnidad = document.createElement('td'); tdUnidad.className = 'td-unidad'; tdUnidad.innerHTML = formatUnidadHTML(item.unidad); tr.appendChild(tdUnidad);
+        const tdHIni = document.createElement('td'); tdHIni.className = 'td-num'; tdHIni.textContent = formatHorometro(item.hInicial); tr.appendChild(tdHIni);
+        const tdHFin = document.createElement('td'); tdHFin.className = 'td-num'; tdHFin.textContent = formatHorometro(item.hFinal); tr.appendChild(tdHFin);
 
         const tdTotal = document.createElement('td');
         tdTotal.className = 'td-num';
@@ -1691,39 +1447,24 @@
         const isOverdue = rawUpper.includes('RETRASADO') || (item.mttoNum !== null && item.mttoNum < 0);
 
         if (item.mttoRaw === '') {
-          tdMtto.className = 'td-mtto-normal';
-          tdMtto.textContent = '';
+          tdMtto.className = 'td-mtto-normal'; tdMtto.textContent = '';
         } else if (isOverdue) {
           tdMtto.className = 'td-mtto-overdue';
-          if (rawUpper.includes('RETRASADO')) {
-            tdMtto.textContent = item.mttoRaw;
-          } else {
+          if (rawUpper.includes('RETRASADO')) tdMtto.textContent = item.mttoRaw;
+          else {
             const absHrs = Math.abs(item.mttoNum);
-            const hrsFmt = Number.isInteger(absHrs) ? String(absHrs) : absHrs.toFixed(1);
-            tdMtto.textContent = `MTTO RETRASADO POR ${hrsFmt} Horas`;
+            tdMtto.textContent = `MTTO RETRASADO POR ${Number.isInteger(absHrs) ? absHrs : absHrs.toFixed(1)} Horas`;
           }
         } else {
           tdMtto.className = 'td-mtto-normal';
-          if (rawUpper.includes('HORA')) {
-            tdMtto.textContent = item.mttoRaw;
-          } else if (item.mttoNum !== null) {
-            const hrsFmt = Number.isInteger(item.mttoNum) ? String(item.mttoNum) : item.mttoNum.toFixed(1);
-            tdMtto.textContent = `${hrsFmt} Horas`;
-          } else {
-            tdMtto.textContent = item.mttoRaw;
-          }
+          if (rawUpper.includes('HORA')) tdMtto.textContent = item.mttoRaw;
+          else if (item.mttoNum !== null) tdMtto.textContent = `${Number.isInteger(item.mttoNum) ? item.mttoNum : item.mttoNum.toFixed(1)} Horas`;
+          else tdMtto.textContent = item.mttoRaw;
         }
         tr.appendChild(tdMtto);
 
-        const tdComb = document.createElement('td');
-        tdComb.className = 'td-comb';
-        tdComb.textContent = item.combustible > 0 ? `${item.combustible.toFixed(2)} Gal` : '';
-        tr.appendChild(tdComb);
-
-        const tdCombRest = document.createElement('td');
-        tdCombRest.className = 'td-num';
-        tdCombRest.textContent = item.combRestNum !== null ? item.combRestNum.toFixed(2) : '';
-        tr.appendChild(tdCombRest);
+        const tdComb = document.createElement('td'); tdComb.className = 'td-comb'; tdComb.textContent = item.combustible > 0 ? `${item.combustible.toFixed(2)} Gal` : ''; tr.appendChild(tdComb);
+        const tdCombRest = document.createElement('td'); tdCombRest.className = 'td-num'; tdCombRest.textContent = item.combRestNum !== null ? item.combRestNum.toFixed(2) : ''; tr.appendChild(tdCombRest);
 
         tbody.appendChild(tr);
       });
@@ -1734,10 +1475,7 @@
       if (!target) return;
 
       const originalText = btnEl ? btnEl.innerHTML : '';
-      if (btnEl) {
-        btnEl.disabled = true;
-        btnEl.innerHTML = '⏳ Generando HD...';
-      }
+      if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '⏳ Generando HD...'; }
 
       const liveWrapper = document.querySelector('#chartCardBlock .chart-wrapper');
       const prevWrapperWidth = liveWrapper ? liveWrapper.style.width : '';
@@ -1763,7 +1501,7 @@
         offscreenWrapper.style.left = '-99999px';
         offscreenWrapper.style.top = '0';
         offscreenWrapper.style.width = `${totalExportWidth}px`;
-        offscreenWrapper.style.backgroundColor = '#f1f5f9';
+        offscreenWrapper.style.backgroundColor = '#f8fafc';
         offscreenWrapper.style.padding = '24px';
         offscreenWrapper.style.zIndex = '-1';
 
@@ -1774,49 +1512,33 @@
         if (hdChartDataUrl && clonedCanvas) {
           const img = document.createElement('img');
           img.src = hdChartDataUrl;
-          img.style.width = '100%';
-          img.style.height = '100%';
-          img.style.display = 'block';
+          img.style.width = '100%'; img.style.height = '100%'; img.style.display = 'block';
           clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
         }
 
         clone.querySelectorAll('.table-card, .table-responsive').forEach(el => {
-          el.style.overflow = 'visible';
-          el.style.width = '100%';
-          el.style.maxWidth = 'none';
+          el.style.overflow = 'visible'; el.style.width = '100%'; el.style.maxWidth = 'none';
         });
 
         clone.querySelectorAll('.report-table').forEach(tbl => {
-          tbl.style.width = '100%';
-          tbl.style.minWidth = `${innerContentWidth}px`;
+          tbl.style.width = '100%'; tbl.style.minWidth = `${innerContentWidth}px`;
         });
 
         offscreenWrapper.appendChild(clone);
         document.body.appendChild(offscreenWrapper);
 
         await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 60)));
-
         const fullHeight = offscreenWrapper.scrollHeight;
 
         const canvasImage = await html2canvas(offscreenWrapper, {
-          scale: 3,
-          useCORS: true,
-          backgroundColor: '#f1f5f9',
-          width: totalExportWidth,
-          height: fullHeight,
-          windowWidth: totalExportWidth,
-          windowHeight: fullHeight,
-          scrollX: 0,
-          scrollY: 0,
-          logging: false
+          scale: 3, useCORS: true, backgroundColor: '#f8fafc',
+          width: totalExportWidth, height: fullHeight, windowWidth: totalExportWidth, windowHeight: fullHeight,
+          scrollX: 0, scrollY: 0, logging: false
         });
 
         document.body.removeChild(offscreenWrapper);
 
-        const scopeText = cleanSpaces(document.getElementById('activeScopeBadge').textContent)
-          .replace(/[\/\\\s]+/g, '-')
-          .replace(/[^a-zA-Z0-9_-]/g, '');
-
+        const scopeText = cleanSpaces(document.getElementById('activeScopeBadge').textContent).replace(/[\/\\\s]+/g, '-').replace(/[^a-zA-Z0-9_-]/g, '');
         const fileName = `${prefix}_${scopeText || 'Maquinaria'}.png`;
 
         await new Promise((resolve) => {
@@ -1824,10 +1546,8 @@
             if (blob) {
               const url = URL.createObjectURL(blob);
               const link = document.createElement('a');
-              link.download = fileName;
-              link.href = url;
-              document.body.appendChild(link);
-              link.click();
+              link.download = fileName; link.href = url;
+              document.body.appendChild(link); link.click();
               document.body.removeChild(link);
               setTimeout(() => URL.revokeObjectURL(url), 2000);
             }
@@ -1843,14 +1563,10 @@
           charts.main.resize();
           charts.main.update('none');
         }
-        if (btnEl) {
-          btnEl.disabled = false;
-          btnEl.innerHTML = originalText;
-        }
+        if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = originalText; }
       }
     }
 
-    // Event Listeners
     document.querySelectorAll('#periodTabs button').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('#periodTabs button').forEach(b => b.classList.remove('active'));
@@ -1865,7 +1581,6 @@
       document.getElementById(id).addEventListener('change', updateDashboard);
     });
 
-    // Inicializar
     fetchSheetData();
   </script>
 </body>
