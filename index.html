@@ -857,10 +857,6 @@
       ctx.restore();
     }
 
-    // Plugin que:
-    // 1. No escribe nombres de lugares dentro de las barras (ya están en la leyenda inferior).
-    //    Solo muestra las horas por tramo si la barra tiene 2 o más lugares (modo bandera).
-    // 2. Garantiza separación vertical estricta entre la etiqueta de Horas (h) y Combustible (Gal) para que nunca se superpongan.
     const flagAndLabelsPlugin = {
       id: 'flagAndLabelsPlugin',
       afterDatasetsDraw(chart) {
@@ -891,7 +887,7 @@
             activeSegments.push({ val, el });
           });
 
-          // Si trabajó en 2 o más lugares (modo bandera), mostrar solo las horas de cada franja dentro de la barra (sin nombre de lugar)
+          // Si trabajó en 2 o más lugares (modo bandera), mostrar solo las horas de cada franja dentro de la barra
           if (activeSegments.length > 1) {
             activeSegments.forEach(({ val, el }) => {
               const segHeight = Math.abs(el.base - el.y);
@@ -924,7 +920,7 @@
           }
         }
 
-        // Píldora de Combustible (Gal) sobre la línea punteada con detección estricta de colisión
+        // Píldora de Combustible (Gal) sobre la línea punteada sin colisión
         chart.data.datasets.forEach((dataset, dsIndex) => {
           if (dataset.type !== 'line') return;
           const meta = chart.getDatasetMeta(dsIndex);
@@ -938,8 +934,6 @@
             const barBadgeY = barBadgeYMap[i];
             let fuelY = Math.max(13, el.y - 16);
 
-            // Si existe etiqueta de horas en la misma columna y la distancia vertical es menor a 25px,
-            // apilar la etiqueta de combustible limpia y completamente por encima de la etiqueta de horas
             if (barBadgeY !== null && Math.abs(fuelY - barBadgeY) < 25) {
               fuelY = Math.max(13, barBadgeY - 25);
             }
@@ -1046,9 +1040,13 @@
               position: 'bottom',
               labels: {
                 color: '#0f172a',
-                font: { size: 12, weight: '700' },
+                font: { size: 12.5, weight: '700' },
                 padding: 20,
-                usePointStyle: true
+                usePointStyle: true,
+                // Ocultar "Combustible Abastecido (Gal)" de la leyenda inferior y dejar solo los lugares
+                filter(legendItem, chartData) {
+                  return chartData.datasets[legendItem.datasetIndex].type !== 'line';
+                }
               }
             },
             tooltip: {
@@ -1092,8 +1090,17 @@
               stacked: true,
               beginAtZero: true,
               grace: '20%',
-              title: { display: true, text: 'Horas (h)', color: theme.axisLeftColor, font: { size: 12, weight: '700' } },
-              ticks: { color: '#475569', font: { weight: '600' } },
+              title: {
+                display: true,
+                text: 'Horas (h)',
+                color: theme.axisLeftColor,
+                font: { size: 15, weight: '800' },
+                padding: { bottom: 8 }
+              },
+              ticks: {
+                color: '#1e293b',
+                font: { size: 13, weight: '700' }
+              },
               grid: { color: 'rgba(148, 163, 184, 0.25)' }
             },
             y1: {
@@ -1101,8 +1108,17 @@
               position: 'right',
               beginAtZero: true,
               grace: '20%',
-              title: { display: true, text: 'Combustible (Gal)', color: theme.lineColor, font: { size: 12, weight: '700' } },
-              ticks: { color: '#475569', font: { weight: '600' } },
+              title: {
+                display: true,
+                text: 'Combustible (Gal)',
+                color: theme.lineColor,
+                font: { size: 15, weight: '800' },
+                padding: { bottom: 8 }
+              },
+              ticks: {
+                color: '#1e293b',
+                font: { size: 13, weight: '700' }
+              },
               grid: { drawOnChartArea: false }
             }
           }
