@@ -922,7 +922,7 @@
           throw new Error('La hoja no contiene suficientes filas.');
         }
 
-        // Mapear estrictamente en el orden de las filas del CSV
+        // Mapear estrictamente en el orden de las filas del CSV (Google Sheets)
         rawRows = matrix.slice(1).map((cols, rowIdx) => {
           const getCol = (idx) => cleanSpaces(cols[idx] || '');
           const fechaObj = parseFechaStr(getCol(4));
@@ -1015,6 +1015,9 @@
         periodFilteredData = periodFilteredData.filter(r => r.lugar === selectedLugar);
       }
 
+      // Ordenar los registros del período según su posición de fila exacta en la hoja
+      periodFilteredData.sort((a, b) => a.rowIdx - b.rowIdx);
+
       const activeEquiposInPeriod = new Set(
         periodFilteredData.filter(r => r.totalHoras > 0).map(r => r.equipo)
       );
@@ -1024,9 +1027,15 @@
       );
       const isFirstRender = currentChecked.size === 0;
 
-      // Mantener estrictamente el orden de aparición original (fila por fila de la hoja)
+      // Priorizar primero el orden exacto de las filas del período seleccionado, seguido del resto
       const seen = new Set();
       const allEquiposList = [];
+      periodFilteredData.forEach(r => {
+        if (r.equipo && !seen.has(r.equipo)) {
+          seen.add(r.equipo);
+          allEquiposList.push(r.equipo);
+        }
+      });
       rawRows.forEach(r => {
         if (r.equipo && !seen.has(r.equipo)) {
           seen.add(r.equipo);
@@ -1201,9 +1210,9 @@
 
       const selectedTemporal = document.getElementById('filterTemporal').value;
       const selectedLugar = document.getElementById('filterLugar').value;
-      const selectedEquiposArr = getSelectedEquipos();
 
       updateEquipoCheckboxesAndLabels();
+      const selectedEquiposArr = getSelectedEquipos();
 
       let activeData = [];
       let scopeLabel = '-';
@@ -1235,13 +1244,27 @@
         return true;
       });
 
+      // Ordenar estrictamente según el índice de fila en la hoja (rowIdx ascendente)
+      const sortedActiveData = [...activeData].sort((a, b) => a.rowIdx - b.rowIdx);
+
+      // Extraer la lista única de equipos en el mismo orden exacto para Gráfico (izq -> der) y Tabla (arriba -> abajo)
+      const seenEquipos = new Set();
+      const orderedEquipos = [];
+      sortedActiveData.forEach(r => {
+        const isAllowed = selectedEquiposArr.length === 0 || selectedEquiposArr.includes(r.equipo);
+        if (r.equipo && isAllowed && !seenEquipos.has(r.equipo)) {
+          seenEquipos.add(r.equipo);
+          orderedEquipos.push(r.equipo);
+        }
+      });
+
       document.getElementById('mainChartTitle').textContent = theme.title;
       document.getElementById('activeScopeBadge').textContent = scopeLabel || '-';
       document.getElementById('tableScopeDate').textContent = scopeLabel || '-';
       document.getElementById('tableBannerTitle').textContent = theme.tableTitle;
 
-      renderMainChart(activeData, theme, selectedEquiposArr);
-      renderReportTable(activeData, selectedEquiposArr, selectedLugar);
+      renderMainChart(sortedActiveData, orderedEquipos, theme);
+      renderReportTable(sortedActiveData, orderedEquipos);
     }
 
     function drawPillBadge(ctx, text, centerX, centerY, bgColor, textColor, borderColor = '#ffffff') {
@@ -1367,25 +1390,12 @@
       }
     };
 
-    function renderMainChart(activeData, theme, selectedEquiposArr) {
+    function renderMainChart(sortedActiveData, orderedEquipos, theme) {
       if (charts.main) charts.main.destroy();
       const ctx = document.getElementById('mainTimeChart').getContext('2d');
 
-      // Obtener equipos en el orden estricto de aparicion en rawRows
-      const seen = new Set();
-      const originalOrderedEquipos = [];
-      rawRows.forEach(r => {
-        if (r.equipo && !seen.has(r.equipo)) {
-          seen.add(r.equipo);
-          originalOrderedEquipos.push(r.equipo);
-        }
-      });
-
-      const activeEquiposSet = new Set(activeData.map(r => r.equipo));
-      const orderedEquipos = originalOrderedEquipos.filter(eq => selectedEquiposArr.includes(eq) && activeEquiposSet.has(eq));
-
       const activeLugaresSet = new Set();
-      activeData.forEach(r => {
+      sortedActiveData.forEach(r => {
         if (r.totalHoras > 0) activeLugaresSet.add(r.lugar);
       });
 
@@ -1401,7 +1411,7 @@
         combByEquipo.set(eq, 0);
       });
 
-      activeData.forEach(r => {
+      sortedActiveData.forEach(r => {
         const eq = r.equipo;
         if (hoursByEquipoLugar.has(eq)) {
           const lugarMap = hoursByEquipoLugar.get(eq);
@@ -1558,59 +1568,50 @@
       return Number.isInteger(val) ? String(val) : val.toFixed(1);
     }
 
-    function renderReportTable(activeData, selectedEquiposArr, selectedLugar) {
+    function renderReportTable(sortedActiveData, orderedEquipos) {
       const tbody = document.getElementById('reportTableBody');
       tbody.innerHTML = '';
 
-      // ORDEN ESTRICTO: Usamos directamente el orden en que aparecen las filas (rowIdx ascendente)
-      const sortedActiveData = [...activeData].sort((a, b) => a.rowIdx - b.rowIdx);
-      
-      const seenEquiposInOrder = new Set();
-      const orderedRowsData = [];
+      const orderedRowsData = orderedEquipos.map(eq => {
+        const matches = sortedActiveData.filter(m => m.equipo.toLowerCase() === eq.toLowerCase());
+        if (matches.length === 0) return null;
 
-      sortedActiveData.forEach(r => {
-        if (selectedEquiposArr.includes(r.equipo) && !seenEquiposInOrder.has(r.equipo)) {
-          seenEquiposInOrder.add(r.equipo);
-          
-          const matches = activeData.filter(m => m.equipo.toLowerCase() === r.equipo.toLowerCase());
-          
-          const lugaresUnicos = [...new Set(matches.map(m => m.lugar).filter(l => l && l !== 'SIN DATA'))];
-          const lugarStr = lugaresUnicos.length > 0 ? lugaresUnicos.join(' / ') : matches[0].lugar;
+        const lugaresUnicos = [...new Set(matches.map(m => m.lugar).filter(l => l && l !== 'SIN DATA'))];
+        const lugarStr = lugaresUnicos.length > 0 ? lugaresUnicos.join(' / ') : matches[0].lugar;
 
-          const operatedWithOp = matches.filter(m => m.totalHoras > 0 && cleanSpaces(m.operador) !== '');
-          const allValidOps = matches.map(m => cleanSpaces(m.operador)).filter(Boolean);
-          const operadorStr = operatedWithOp.length > 0
-            ? cleanSpaces(operatedWithOp[operatedWithOp.length - 1].operador)
-            : (allValidOps.length > 0 ? allValidOps[allValidOps.length - 1] : '-');
+        const operatedWithOp = matches.filter(m => m.totalHoras > 0 && cleanSpaces(m.operador) !== '');
+        const allValidOps = matches.map(m => cleanSpaces(m.operador)).filter(Boolean);
+        const operadorStr = operatedWithOp.length > 0
+          ? cleanSpaces(operatedWithOp[operatedWithOp.length - 1].operador)
+          : (allValidOps.length > 0 ? allValidOps[allValidOps.length - 1] : '-');
 
-          const validHIni = matches.filter(m => m.hInicial !== null);
-          const validHFin = matches.filter(m => m.hFinal !== null);
-          const hInicial = validHIni.length > 0 ? validHIni[0].hInicial : null;
-          const hFinal = validHFin.length > 0 ? validHFin[validHFin.length - 1].hFinal : null;
+        const validHIni = matches.filter(m => m.hInicial !== null);
+        const validHFin = matches.filter(m => m.hFinal !== null);
+        const hInicial = validHIni.length > 0 ? validHIni[0].hInicial : null;
+        const hFinal = validHFin.length > 0 ? validHFin[validHFin.length - 1].hFinal : null;
 
-          const totalHoras = matches.reduce((sum, m) => sum + m.totalHoras, 0);
-          const combustible = matches.reduce((sum, m) => sum + m.combustible, 0);
+        const totalHoras = matches.reduce((sum, m) => sum + m.totalHoras, 0);
+        const combustible = matches.reduce((sum, m) => sum + m.combustible, 0);
 
-          const validMtto = matches.filter(m => m.mttoRaw !== '');
-          const lastMtto = validMtto.length > 0 ? validMtto[validMtto.length - 1] : null;
+        const validMtto = matches.filter(m => m.mttoRaw !== '');
+        const lastMtto = validMtto.length > 0 ? validMtto[validMtto.length - 1] : null;
 
-          const validCombRest = matches.filter(m => m.horasRestantesComb !== null);
-          const lastCombRest = validCombRest.length > 0 ? validCombRest[validCombRest.length - 1] : null;
+        const validCombRest = matches.filter(m => m.horasRestantesComb !== null);
+        const lastCombRest = validCombRest.length > 0 ? validCombRest[validCombRest.length - 1] : null;
 
-          orderedRowsData.push({
-            lugar: lugarStr,
-            operador: operadorStr,
-            unidad: r.equipo,
-            hInicial,
-            hFinal,
-            totalHoras,
-            mttoRaw: lastMtto ? lastMtto.mttoRaw : '',
-            mttoNum: lastMtto ? lastMtto.horasRestantesMtto : null,
-            combustible,
-            combRestNum: lastCombRest ? lastCombRest.horasRestantesComb : null
-          });
-        }
-      });
+        return {
+          lugar: lugarStr,
+          operador: operadorStr,
+          unidad: eq,
+          hInicial,
+          hFinal,
+          totalHoras,
+          mttoRaw: lastMtto ? lastMtto.mttoRaw : '',
+          mttoNum: lastMtto ? lastMtto.horasRestantesMtto : null,
+          combustible,
+          combRestNum: lastCombRest ? lastCombRest.horasRestantesComb : null
+        };
+      }).filter(Boolean);
 
       const maxHoras = Math.max(...orderedRowsData.map(r => r.totalHoras), 0);
 
