@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RESUMEN DE MAQUINARIA HORAS Y COMBUSTIBLE</title>
+  <title>CONTROL DE MAQUINARIA Y VOLQUETES</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <style>
@@ -58,6 +58,13 @@
       border-bottom: 1px solid var(--border);
     }
 
+    .header-left {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 16px;
+    }
+
     header h1 {
       font-size: 1.45rem;
       font-weight: 700;
@@ -75,6 +82,41 @@
       padding: 4px 10px;
       border-radius: 20px;
       border: 1px solid #bbf7d0;
+    }
+
+    /* Selector Maquinaria / Volquetes */
+    .mode-switcher {
+      display: inline-flex;
+      background: #e2e8f0;
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid #cbd5e1;
+      gap: 4px;
+    }
+
+    .mode-switcher button {
+      background: transparent;
+      border: none;
+      color: #475569;
+      padding: 7px 16px;
+      border-radius: 7px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mode-switcher button:hover {
+      color: #0f172a;
+    }
+
+    .mode-switcher button.active {
+      background: #0f172a;
+      color: #ffffff;
+      box-shadow: 0 2px 4px rgba(15, 23, 42, 0.18);
     }
 
     .status-bar {
@@ -210,7 +252,7 @@
       background: #ffffff;
     }
 
-    /* Dropdown Multiselect personalizado para Equipos */
+    /* Dropdown Multiselect personalizado */
     .multiselect-dropdown {
       position: relative;
       width: 100%;
@@ -471,7 +513,7 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 0.87rem;
-      min-width: 1240px;
+      min-width: 1180px;
     }
 
     table.report-table thead th {
@@ -481,7 +523,7 @@
       text-transform: uppercase;
       font-size: 0.74rem;
       letter-spacing: 0.03em;
-      padding: 7px 10px;
+      padding: 8px 10px;
       text-align: center;
       border: 1px solid rgba(15, 23, 42, 0.14);
       line-height: 1.18;
@@ -525,6 +567,14 @@
       white-space: nowrap;
       color: #0f172a;
       font-weight: 500;
+    }
+
+    .td-placa {
+      text-align: center;
+      white-space: nowrap;
+      color: #0f172a;
+      font-weight: 700;
+      letter-spacing: 0.03em;
     }
 
     .td-num {
@@ -609,12 +659,16 @@
 <body>
   <div class="container">
     <header>
-      <div>
-        <h1>Control de Maquinaria <span class="badge">EN VIVO</span></h1>
+      <div class="header-left">
+        <h1 id="mainHeaderTitle">Control de Maquinaria <span class="badge">EN VIVO</span></h1>
+        <div class="mode-switcher" id="modeSwitcher">
+          <button type="button" data-mode="maquinaria" class="active" onclick="switchMode('maquinaria')">🚜 Maquinaria</button>
+          <button type="button" data-mode="volquetes" onclick="switchMode('volquetes')">🚛 Volquetes</button>
+        </div>
       </div>
       <div class="status-bar">
         <span id="lastUpdate">Cargando datos...</span>
-        <button class="btn-refresh" onclick="fetchSheetData()">↻ Actualizar</button>
+        <button class="btn-refresh" onclick="fetchSheetData(true)">↻ Actualizar</button>
         <button class="btn-download" id="btnDownloadAll" onclick="downloadSectionAsImage('exportContainer', 'Reporte_Completo_HD', this)">
           📷 Descargar Imagen HD
         </button>
@@ -641,13 +695,13 @@
           <select id="filterTemporal"></select>
         </div>
 
-        <div class="control-group">
+        <div class="control-group" id="lugarControlGroup">
           <label for="filterLugar">Lugar / Frente</label>
           <select id="filterLugar"><option value="ALL">Todos los lugares</option></select>
         </div>
 
         <div class="control-group">
-          <label>Equipo (Orden Estricto de la Hoja - Múltiple)</label>
+          <label id="unitMultiselectLabel">Equipo (Orden Estricto de la Hoja - Múltiple)</label>
           <div class="multiselect-dropdown" id="equipoMultiselect">
             <button type="button" class="multiselect-btn" onclick="toggleEquipoDropdown(event)">
               <span id="equipoBtnLabel">TODOS LOS EQUIPOS</span>
@@ -656,7 +710,8 @@
             <div class="multiselect-content" id="equipoDropdownContent">
               <label class="multiselect-item" style="border-bottom: 1px solid #e2e8f0; font-weight: 700; margin-bottom: 4px;">
                 <div class="multiselect-item-left">
-                  <input type="checkbox" id="selectAllEquipos" onchange="toggleSelectAllEquipos(this)"> TODOS LOS EQUIPOS
+                  <input type="checkbox" id="selectAllEquipos" onchange="toggleSelectAllEquipos(this)">
+                  <span id="selectAllLabelText">TODOS LOS EQUIPOS</span>
                 </div>
               </label>
               <div id="equipoCheckboxList"></div>
@@ -671,7 +726,7 @@
         <div class="chart-card" id="chartCardBlock">
           <div class="chart-header">
             <div class="chart-header-left" data-html2canvas-ignore="true">
-              <button class="btn-mini-export" onclick="downloadSectionAsImage('chartCardBlock', 'Grafico_Maquinaria_HD', this)" title="Descargar solo gráfico en HD">
+              <button class="btn-mini-export" onclick="downloadSectionAsImage('chartCardBlock', 'Grafico_HD', this)" title="Descargar solo gráfico en HD">
                 📷 PNG HD
               </button>
             </div>
@@ -690,25 +745,13 @@
             <div class="table-banner-title" id="tableBannerTitle">
               REPORTE DIARIO MAQUINARIA (HORAS, COMBUSTIBLE Y HORAS RESTANTES PARA MTTO)
             </div>
-            <button class="btn-mini-export-dark" data-html2canvas-ignore="true" onclick="downloadSectionAsImage('tableCardBlock', 'Tabla_Maquinaria_HD', this)" title="Descargar solo tabla en HD">
+            <button class="btn-mini-export-dark" data-html2canvas-ignore="true" onclick="downloadSectionAsImage('tableCardBlock', 'Tabla_HD', this)" title="Descargar solo tabla en HD">
               📷 PNG HD
             </button>
           </div>
           <div class="table-responsive">
             <table class="report-table">
-              <thead>
-                <tr>
-                  <th>LUGAR</th>
-                  <th>OPERADOR</th>
-                  <th>UNIDAD</th>
-                  <th>H. INICIAL</th>
-                  <th>H. FINAL</th>
-                  <th>TOTAL HORAS</th>
-                  <th class="th-mtto">HORAS RESTANTES PARA MTTO</th>
-                  <th>COMBUSTIBLE ABASTECIDO</th>
-                  <th>HORAS RESTANTES DE COMBUSTIBLE</th>
-                </tr>
-              </thead>
+              <thead id="reportTableHead"></thead>
               <tbody id="reportTableBody"></tbody>
             </table>
           </div>
@@ -719,13 +762,45 @@
 
   <script>
     const SHEET_ID = '1YL5wIhK9Po-Je5P96Nm0m4cqiLqx0FrhiRCttU3wA7Y';
-    const GID = '1193959640';
-    const CSV_EXPORT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
+    const SHEET_CONFIGS = {
+      maquinaria: {
+        gid: '1193959640',
+        headerTitle: 'Control de Maquinaria',
+        unitLabel: 'Equipo (Orden Estricto de la Hoja - Múltiple)',
+        allUnitsText: 'TODOS LOS EQUIPOS',
+        hasLugar: true,
+        titles: {
+          daily: 'RESUMEN DIARIO DE MAQUINARIA HORAS Y COMBUSTIBLE',
+          weekly: 'RESUMEN SEMANAL DE MAQUINARIA HORAS Y COMBUSTIBLE',
+          monthly: 'RESUMEN MENSUAL DE MAQUINARIA HORAS Y COMBUSTIBLE'
+        },
+        tableTitles: {
+          daily: 'REPORTE DIARIO MAQUINARIA (HORAS, COMBUSTIBLE Y HORAS RESTANTES PARA MTTO)',
+          weekly: 'REPORTE SEMANAL MAQUINARIA (HORAS, COMBUSTIBLE Y HORAS RESTANTES PARA MTTO)',
+          monthly: 'REPORTE MENSUAL MAQUINARIA (HORAS, COMBUSTIBLE Y HORAS RESTANTES PARA MTTO)'
+        }
+      },
+      volquetes: {
+        gid: '31107902',
+        headerTitle: 'Control de Volquetes',
+        unitLabel: 'Placa (Orden Estricto de la Hoja - Múltiple)',
+        allUnitsText: 'TODAS LAS PLACAS',
+        hasLugar: false,
+        titles: {
+          daily: 'RESUMEN DIARIO DE VOLQUETES HORAS Y COMBUSTIBLE',
+          weekly: 'RESUMEN SEMANAL DE VOLQUETES HORAS Y COMBUSTIBLE',
+          monthly: 'RESUMEN MENSUAL DE VOLQUETES HORAS Y COMBUSTIBLE'
+        },
+        tableTitles: {
+          daily: 'REPORTE DIARIO VOLQUETES (HORAS Y COMBUSTIBLE)',
+          weekly: 'REPORTE SEMANAL VOLQUETES (HORAS Y COMBUSTIBLE)',
+          monthly: 'REPORTE MENSUAL VOLQUETES (HORAS Y COMBUSTIBLE)'
+        }
+      }
+    };
 
     const PERIOD_THEMES = {
       daily: {
-        title: 'RESUMEN DIARIO DE MAQUINARIA HORAS Y COMBUSTIBLE',
-        tableTitle: 'REPORTE DIARIO MAQUINARIA (HORAS, COMBUSTIBLE Y HORAS RESTANTES PARA MTTO)',
         selectorLabel: 'FECHA',
         flagColors: [
           '#f59e0b', '#0d9488', '#ea580c', '#2563eb',
@@ -744,8 +819,6 @@
         badgeBorder: '#fcd34d'
       },
       weekly: {
-        title: 'RESUMEN SEMANAL DE MAQUINARIA HORAS Y COMBUSTIBLE',
-        tableTitle: 'REPORTE SEMANAL MAQUINARIA (HORAS, COMBUSTIBLE Y HORAS RESTANTES PARA MTTO)',
         selectorLabel: 'SEMANA',
         flagColors: [
           '#10b981', '#f59e0b', '#4f46e5', '#e11d48',
@@ -764,8 +837,6 @@
         badgeBorder: '#6ee7b7'
       },
       monthly: {
-        title: 'RESUMEN MENSUAL DE MAQUINARIA HORAS Y COMBUSTIBLE',
-        tableTitle: 'REPORTE MENSUAL MAQUINARIA (HORAS, COMBUSTIBLE Y HORAS RESTANTES PARA MTTO)',
         selectorLabel: 'MES',
         flagColors: [
           '#2563eb', '#f59e0b', '#059669', '#e11d48',
@@ -791,6 +862,13 @@
       'septiembre': 9, 'setiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
     };
 
+    let currentMode = 'maquinaria';
+    let currentPeriod = 'daily';
+    let dataCache = { maquinaria: null, volquetes: null };
+    let rawRows = [];
+    let allLugares = [];
+    let charts = {};
+
     function cleanSpaces(str) {
       return String(str || '')
         .replace(/[\u00A0\u200B-\u200D\uFEFF]/g, ' ')
@@ -798,15 +876,10 @@
         .trim();
     }
 
-    function getExactEquipoName(rawName) {
+    function getExactUnitName(rawName) {
       const clean = cleanSpaces(rawName);
       return clean ? clean : 'Sin Especificar';
     }
-
-    let rawRows = [];
-    let allLugares = [];
-    let currentPeriod = 'daily';
-    let charts = {};
 
     function parseCSV(text) {
       const rows = [];
@@ -904,26 +977,9 @@
       return `${d}/${m}/${y}`;
     }
 
-    async function fetchSheetData() {
-      const loader = document.getElementById('loader');
-      const errorBox = document.getElementById('errorBox');
-      const content = document.getElementById('dashboardContent');
-
-      loader.style.display = 'block';
-      errorBox.style.display = 'none';
-
-      try {
-        const res = await fetch(`${CSV_EXPORT_URL}&t=${Date.now()}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const csvText = await res.text();
-        const matrix = parseCSV(csvText);
-
-        if (matrix.length < 2) {
-          throw new Error('La hoja no contiene suficientes filas.');
-        }
-
-        // Mapear estrictamente en el orden de las filas del CSV (Google Sheets)
-        rawRows = matrix.slice(1).map((cols, rowIdx) => {
+    function mapSheetRows(matrix, mode) {
+      if (mode === 'maquinaria') {
+        return matrix.slice(1).map((cols, rowIdx) => {
           const getCol = (idx) => cleanSpaces(cols[idx] || '');
           const fechaObj = parseFechaStr(getCol(4));
           const anio = getCol(1) || (fechaObj ? String(fechaObj.getFullYear()) : '');
@@ -937,37 +993,133 @@
           return {
             rowIdx,
             lugar: getCol(0) || 'SIN DATA',
-            anio: anio,
-            sem: sem,
-            mes: mes,
-            fechaObj: fechaObj,
+            anio,
+            sem,
+            mes,
+            fechaObj,
             fechaISO: formatDateISO(fechaObj),
             fechaStr: formatDateES(fechaObj),
             codigo: getCol(5),
             operador: getCol(6),
-            equipo: getExactEquipoName(getCol(7)), // Columna H exacta
-            hIniRaw: hIniRaw,
+            equipo: getExactUnitName(getCol(7)), // Columna H: EQUIPO
             hInicial: hIniRaw !== '' ? parseNum(hIniRaw) : null,
-            hFinRaw: hFinRaw,
             hFinal: hFinRaw !== '' ? parseNum(hFinRaw) : null,
-            totalHoras: parseNum(getCol(10)),
-            mttoRaw: mttoRaw,
+            horasFuera: 0,
+            totalHoras: parseNum(getCol(10)), // Columna K: TOTAL HORAS
+            mttoRaw,
             horasRestantesMtto: mttoRaw !== '' ? parseNum(mttoRaw) : null,
-            combustible: parseNum(getCol(12)),
-            combRestRaw: combRestRaw,
-            horasRestantesComb: combRestRaw !== '' ? parseNum(combRestRaw) : null
+            combustible: parseNum(getCol(12)), // Columna M
+            horasRestantesComb: combRestRaw !== '' ? parseNum(combRestRaw) : null // Columna P
           };
-        }).filter(row => row.codigo && row.codigo.toUpperCase() !== 'CODIGO');
+        }).filter(row => row.codigo && !['CODIGO', 'CÓDIGO'].includes(row.codigo.toUpperCase()));
+      } else {
+        // VOLQUETES:
+        // A(0): AÑO, B(1): SEM, C(2): MES, D(3): FECHA, E(4): CÓDIGO, F(5): NICKNAME
+        // G(6): OPERADOR, H(7): PLACA, I(8): H. INICIAL, J(9): H. FINAL
+        // K(10): HORAS FUERA, L(11): TOTAL HORAS, M(12): COMBUSTIBLE ABASTECIDO, P(15): HORAS RESTANTES DE COMBUSTIBLE
+        return matrix.slice(1).map((cols, rowIdx) => {
+          const getCol = (idx) => cleanSpaces(cols[idx] || '');
+          const fechaObj = parseFechaStr(getCol(3));
+          const anio = getCol(0) || (fechaObj ? String(fechaObj.getFullYear()) : '');
+          const sem = getCol(1);
+          const mes = getCol(2);
+          const hIniRaw = getCol(8);
+          const hFinRaw = getCol(9);
+          const hFueraRaw = getCol(10);
+          const combRestRaw = getCol(15);
 
-        allLugares = [...new Set(rawRows.map(r => r.lugar).filter(Boolean))];
+          return {
+            rowIdx,
+            lugar: 'VOLQUETES',
+            anio,
+            sem,
+            mes,
+            fechaObj,
+            fechaISO: formatDateISO(fechaObj),
+            fechaStr: formatDateES(fechaObj),
+            codigo: getCol(4),
+            operador: getCol(6), // Columna G: OPERADOR
+            equipo: getExactUnitName(getCol(7)), // Columna H: PLACA
+            hInicial: hIniRaw !== '' ? parseNum(hIniRaw) : null, // Columna I
+            hFinal: hFinRaw !== '' ? parseNum(hFinRaw) : null, // Columna J
+            horasFueraRaw: hFueraRaw,
+            horasFuera: hFueraRaw !== '' ? parseNum(hFueraRaw) : 0, // Columna K: HORAS FUERA
+            totalHoras: parseNum(getCol(11)), // Columna L: TOTAL HORAS
+            mttoRaw: '',
+            horasRestantesMtto: null,
+            combustible: parseNum(getCol(12)), // Columna M: COMBUSTIBLE ABASTECIDO
+            horasRestantesComb: combRestRaw !== '' ? parseNum(combRestRaw) : null // Columna P
+          };
+        }).filter(row => row.codigo && !['CODIGO', 'CÓDIGO'].includes(row.codigo.toUpperCase()));
+      }
+    }
+
+    function switchMode(newMode) {
+      if (currentMode === newMode) return;
+      currentMode = newMode;
+
+      document.querySelectorAll('#modeSwitcher button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === currentMode);
+      });
+
+      // Reset checkboxes para cargar todas las unidades/placas del nuevo modo
+      document.getElementById('equipoCheckboxList').innerHTML = '';
+      fetchSheetData(false);
+    }
+
+    async function fetchSheetData(forceRefresh = false) {
+      const cfg = SHEET_CONFIGS[currentMode];
+      const loader = document.getElementById('loader');
+      const errorBox = document.getElementById('errorBox');
+      const content = document.getElementById('dashboardContent');
+
+      document.getElementById('mainHeaderTitle').innerHTML = `${cfg.headerTitle} <span class="badge">EN VIVO</span>`;
+      document.getElementById('unitMultiselectLabel').textContent = cfg.unitLabel;
+      document.getElementById('selectAllLabelText').textContent = cfg.allUnitsText;
+      document.getElementById('lugarControlGroup').style.display = cfg.hasLugar ? 'flex' : 'none';
+
+      errorBox.style.display = 'none';
+
+      if (!forceRefresh && dataCache[currentMode]) {
+        rawRows = dataCache[currentMode].rows;
+        allLugares = dataCache[currentMode].lugares;
+        populateStaticFilters();
+        populateTemporalSelector(false);
+        updateDashboard();
+        loader.style.display = 'none';
+        content.style.display = 'block';
+        document.getElementById('lastUpdate').textContent = `Actualizado: ${dataCache[currentMode].time} (${rawRows.length} filas)`;
+        return;
+      }
+
+      loader.style.display = 'block';
+
+      try {
+        const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${cfg.gid}&t=${Date.now()}`;
+        const res = await fetch(csvUrl);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const csvText = await res.text();
+        const matrix = parseCSV(csvText);
+
+        if (matrix.length < 2) {
+          throw new Error('La hoja no contiene suficientes filas.');
+        }
+
+        const mapped = mapSheetRows(matrix, currentMode);
+        const lugares = cfg.hasLugar ? [...new Set(mapped.map(r => r.lugar).filter(Boolean))] : ['VOLQUETES'];
+        const timeStr = new Date().toLocaleTimeString();
+
+        dataCache[currentMode] = { rows: mapped, lugares, time: timeStr };
+        rawRows = mapped;
+        allLugares = lugares;
 
         populateStaticFilters();
-        populateTemporalSelector(true);
+        populateTemporalSelector(false);
         updateDashboard();
 
         loader.style.display = 'none';
         content.style.display = 'block';
-        document.getElementById('lastUpdate').textContent = `Actualizado: ${new Date().toLocaleTimeString()} (${rawRows.length} filas)`;
+        document.getElementById('lastUpdate').textContent = `Actualizado: ${timeStr} (${rawRows.length} filas)`;
       } catch (err) {
         loader.style.display = 'none';
         errorBox.style.display = 'block';
@@ -976,23 +1128,29 @@
     }
 
     function populateStaticFilters() {
+      const cfg = SHEET_CONFIGS[currentMode];
       const selLugar = document.getElementById('filterLugar');
-      const currentLugar = selLugar.value;
-      selLugar.innerHTML = '<option value="ALL">Todos los lugares</option>';
-      allLugares.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v;
-        opt.textContent = v;
-        selLugar.appendChild(opt);
-      });
-      if ([...selLugar.options].some(o => o.value === currentLugar)) selLugar.value = currentLugar;
+      if (cfg.hasLugar) {
+        const currentLugar = selLugar.value;
+        selLugar.innerHTML = '<option value="ALL">Todos los lugares</option>';
+        allLugares.forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v;
+          opt.textContent = v;
+          selLugar.appendChild(opt);
+        });
+        if ([...selLugar.options].some(o => o.value === currentLugar)) selLugar.value = currentLugar;
+      } else {
+        selLugar.value = 'ALL';
+      }
 
       updateEquipoCheckboxesAndLabels();
     }
 
-function updateEquipoCheckboxesAndLabels() {
+    function updateEquipoCheckboxesAndLabels() {
+      const cfg = SHEET_CONFIGS[currentMode];
       const selectedTemporal = document.getElementById('filterTemporal').value;
-      const selectedLugar = document.getElementById('filterLugar').value;
+      const selectedLugar = cfg.hasLugar ? document.getElementById('filterLugar').value : 'ALL';
 
       let periodFilteredData = [];
       if (currentPeriod === 'daily') {
@@ -1015,36 +1173,38 @@ function updateEquipoCheckboxesAndLabels() {
         periodFilteredData = periodFilteredData.filter(r => r.lugar === selectedLugar);
       }
 
-      // Ordenar los registros del período según su posición de fila exacta en la hoja
       periodFilteredData.sort((a, b) => a.rowIdx - b.rowIdx);
 
       const activeEquiposInPeriod = new Set(
         periodFilteredData.filter(r => r.totalHoras > 0).map(r => r.equipo)
       );
 
-      const wasAllChecked = document.getElementById('selectAllEquipos').checked;
-      const existingChks = document.querySelectorAll('.equipo-chk');
-      const isFirstRender = existingChks.length === 0;
       const currentChecked = new Set(
         [...document.querySelectorAll('.equipo-chk:checked')].map(c => c.value)
       );
+      const isFirstRender = currentChecked.size === 0;
 
-      // Incluir ÚNICAMENTE los equipos existentes en la fecha/período y lugar seleccionados
       const seen = new Set();
-      const availableEquiposList = [];
+      const allEquiposList = [];
       periodFilteredData.forEach(r => {
         if (r.equipo && !seen.has(r.equipo)) {
           seen.add(r.equipo);
-          availableEquiposList.push(r.equipo);
+          allEquiposList.push(r.equipo);
+        }
+      });
+      rawRows.forEach(r => {
+        if (r.equipo && !seen.has(r.equipo)) {
+          seen.add(r.equipo);
+          allEquiposList.push(r.equipo);
         }
       });
 
       const container = document.getElementById('equipoCheckboxList');
       container.innerHTML = '';
 
-      availableEquiposList.forEach(eq => {
+      allEquiposList.forEach(eq => {
         const hasData = activeEquiposInPeriod.has(eq);
-        const isChecked = (isFirstRender || wasAllChecked) ? true : currentChecked.has(eq);
+        const isChecked = isFirstRender ? true : currentChecked.has(eq);
 
         const lbl = document.createElement('label');
         lbl.className = 'multiselect-item';
@@ -1058,7 +1218,7 @@ function updateEquipoCheckboxesAndLabels() {
       });
 
       const allChks = document.querySelectorAll('.equipo-chk');
-      const allChecked = allChks.length > 0 && [...allChks].every(c => c.checked);
+      const allChecked = [...allChks].every(c => c.checked);
       document.getElementById('selectAllEquipos').checked = allChecked;
       updateEquipoButtonLabel();
     }
@@ -1097,16 +1257,18 @@ function updateEquipoCheckboxesAndLabels() {
     }
 
     function updateEquipoButtonLabel() {
+      const cfg = SHEET_CONFIGS[currentMode];
       const chks = document.querySelectorAll('.equipo-chk');
       const checked = document.querySelectorAll('.equipo-chk:checked');
       const lbl = document.getElementById('equipoBtnLabel');
 
       if (checked.length === chks.length || checked.length === 0) {
-        lbl.textContent = 'TODOS LOS EQUIPOS';
+        lbl.textContent = cfg.allUnitsText;
       } else if (checked.length === 1) {
         lbl.textContent = checked[0].value;
       } else {
-        lbl.textContent = `${checked.length} equipos seleccionados`;
+        const suffix = currentMode === 'volquetes' ? 'placas seleccionadas' : 'equipos seleccionados';
+        lbl.textContent = `${checked.length} ${suffix}`;
       }
     }
 
@@ -1201,11 +1363,12 @@ function updateEquipoCheckboxesAndLabels() {
     }
 
     function updateDashboard() {
+      const cfg = SHEET_CONFIGS[currentMode];
       const theme = PERIOD_THEMES[currentPeriod];
       applyThemeColors(theme);
 
       const selectedTemporal = document.getElementById('filterTemporal').value;
-      const selectedLugar = document.getElementById('filterLugar').value;
+      const selectedLugar = cfg.hasLugar ? document.getElementById('filterLugar').value : 'ALL';
 
       updateEquipoCheckboxesAndLabels();
       const selectedEquiposArr = getSelectedEquipos();
@@ -1235,15 +1398,13 @@ function updateEquipoCheckboxesAndLabels() {
       }
 
       activeData = activeData.filter(r => {
-        if (selectedLugar !== 'ALL' && r.lugar !== selectedLugar) return false;
+        if (cfg.hasLugar && selectedLugar !== 'ALL' && r.lugar !== selectedLugar) return false;
         if (selectedEquiposArr.length > 0 && !selectedEquiposArr.includes(r.equipo)) return false;
         return true;
       });
 
-      // Ordenar estrictamente según el índice de fila en la hoja (rowIdx ascendente)
       const sortedActiveData = [...activeData].sort((a, b) => a.rowIdx - b.rowIdx);
 
-      // Extraer la lista única de equipos en el mismo orden exacto para Gráfico (izq -> der) y Tabla (arriba -> abajo)
       const seenEquipos = new Set();
       const orderedEquipos = [];
       sortedActiveData.forEach(r => {
@@ -1254,10 +1415,10 @@ function updateEquipoCheckboxesAndLabels() {
         }
       });
 
-      document.getElementById('mainChartTitle').textContent = theme.title;
+      document.getElementById('mainChartTitle').textContent = cfg.titles[currentPeriod];
       document.getElementById('activeScopeBadge').textContent = scopeLabel || '-';
       document.getElementById('tableScopeDate').textContent = scopeLabel || '-';
-      document.getElementById('tableBannerTitle').textContent = theme.tableTitle;
+      document.getElementById('tableBannerTitle').textContent = cfg.tableTitles[currentPeriod];
 
       renderMainChart(sortedActiveData, orderedEquipos, theme);
       renderReportTable(sortedActiveData, orderedEquipos);
@@ -1389,50 +1550,75 @@ function updateEquipoCheckboxesAndLabels() {
     function renderMainChart(sortedActiveData, orderedEquipos, theme) {
       if (charts.main) charts.main.destroy();
       const ctx = document.getElementById('mainTimeChart').getContext('2d');
+      const cfg = SHEET_CONFIGS[currentMode];
 
-      const activeLugaresSet = new Set();
-      sortedActiveData.forEach(r => {
-        if (r.totalHoras > 0) activeLugaresSet.add(r.lugar);
-      });
-
-      const lugaresList = activeLugaresSet.size > 0
-        ? allLugares.filter(l => activeLugaresSet.has(l))
-        : (allLugares.length > 0 ? [allLugares[0]] : ['SIN DATA']);
-
-      const hoursByEquipoLugar = new Map();
+      let barDatasets = [];
       const combByEquipo = new Map();
+      orderedEquipos.forEach(eq => combByEquipo.set(eq, 0));
 
-      orderedEquipos.forEach(eq => {
-        hoursByEquipoLugar.set(eq, new Map());
-        combByEquipo.set(eq, 0);
-      });
+      if (cfg.hasLugar) {
+        const activeLugaresSet = new Set();
+        sortedActiveData.forEach(r => {
+          if (r.totalHoras > 0) activeLugaresSet.add(r.lugar);
+        });
 
-      sortedActiveData.forEach(r => {
-        const eq = r.equipo;
-        if (hoursByEquipoLugar.has(eq)) {
-          const lugarMap = hoursByEquipoLugar.get(eq);
-          lugarMap.set(r.lugar, (lugarMap.get(r.lugar) || 0) + r.totalHoras);
-          combByEquipo.set(eq, (combByEquipo.get(eq) || 0) + r.combustible);
-        }
-      });
+        const lugaresList = activeLugaresSet.size > 0
+          ? allLugares.filter(l => activeLugaresSet.has(l))
+          : (allLugares.length > 0 ? [allLugares[0]] : ['SIN DATA']);
 
-      const barDatasets = lugaresList.map((lugar, idx) => {
-        const color = theme.flagColors[idx % theme.flagColors.length];
-        return {
-          label: lugar,
-          data: orderedEquipos.map(eq => {
-            const val = hoursByEquipoLugar.get(eq)?.get(lugar) || 0;
-            return Number(val.toFixed(1));
-          }),
-          backgroundColor: color,
+        const hoursByEquipoLugar = new Map();
+        orderedEquipos.forEach(eq => hoursByEquipoLugar.set(eq, new Map()));
+
+        sortedActiveData.forEach(r => {
+          const eq = r.equipo;
+          if (hoursByEquipoLugar.has(eq)) {
+            const lugarMap = hoursByEquipoLugar.get(eq);
+            lugarMap.set(r.lugar, (lugarMap.get(r.lugar) || 0) + r.totalHoras);
+            combByEquipo.set(eq, (combByEquipo.get(eq) || 0) + r.combustible);
+          }
+        });
+
+        barDatasets = lugaresList.map((lugar, idx) => {
+          const color = theme.flagColors[idx % theme.flagColors.length];
+          return {
+            label: lugar,
+            data: orderedEquipos.map(eq => {
+              const val = hoursByEquipoLugar.get(eq)?.get(lugar) || 0;
+              return Number(val.toFixed(1));
+            }),
+            backgroundColor: color,
+            borderColor: '#ffffff',
+            borderWidth: 1.5,
+            borderRadius: 4,
+            stack: 'horas',
+            order: 2,
+            yAxisID: 'y'
+          };
+        });
+      } else {
+        const hoursByPlaca = new Map();
+        orderedEquipos.forEach(eq => hoursByPlaca.set(eq, 0));
+
+        sortedActiveData.forEach(r => {
+          const eq = r.equipo;
+          if (hoursByPlaca.has(eq)) {
+            hoursByPlaca.set(eq, (hoursByPlaca.get(eq) || 0) + r.totalHoras);
+            combByEquipo.set(eq, (combByEquipo.get(eq) || 0) + r.combustible);
+          }
+        });
+
+        barDatasets = [{
+          label: 'Total Horas Trabajadas',
+          data: orderedEquipos.map(eq => Number((hoursByPlaca.get(eq) || 0).toFixed(1))),
+          backgroundColor: theme.flagColors[0],
           borderColor: '#ffffff',
           borderWidth: 1.5,
           borderRadius: 4,
           stack: 'horas',
           order: 2,
           yAxisID: 'y'
-        };
-      });
+        }];
+      }
 
       const fuelDataset = {
         label: 'Combustible Abastecido (Gal)',
@@ -1452,6 +1638,8 @@ function updateEquipoCheckboxesAndLabels() {
         order: 1,
         yAxisID: 'y1'
       };
+
+      const unitPrefix = currentMode === 'volquetes' ? 'Total Horas Placa' : 'Total Horas Equipo';
 
       charts.main = new Chart(ctx, {
         type: 'bar',
@@ -1496,7 +1684,7 @@ function updateEquipoCheckboxesAndLabels() {
                   const totalH = tooltipItems
                     .filter(item => item.dataset.type !== 'line')
                     .reduce((sum, item) => sum + (item.parsed.y || 0), 0);
-                  return totalH > 0 ? `Total Horas Equipo: ${totalH.toFixed(1)} h` : '';
+                  return totalH > 0 ? `${unitPrefix}: ${totalH.toFixed(1)} h` : '';
                 }
               }
             }
@@ -1565,8 +1753,38 @@ function updateEquipoCheckboxesAndLabels() {
     }
 
     function renderReportTable(sortedActiveData, orderedEquipos) {
+      const thead = document.getElementById('reportTableHead');
       const tbody = document.getElementById('reportTableBody');
       tbody.innerHTML = '';
+
+      if (currentMode === 'maquinaria') {
+        thead.innerHTML = `
+          <tr>
+            <th>LUGAR</th>
+            <th>OPERADOR</th>
+            <th>UNIDAD</th>
+            <th>H. INICIAL</th>
+            <th>H. FINAL</th>
+            <th>TOTAL HORAS</th>
+            <th class="th-mtto">HORAS RESTANTES PARA MTTO</th>
+            <th>COMBUSTIBLE ABASTECIDO</th>
+            <th>HORAS RESTANTES DE COMBUSTIBLE</th>
+          </tr>
+        `;
+      } else {
+        thead.innerHTML = `
+          <tr>
+            <th>OPERADOR</th>
+            <th>PLACA</th>
+            <th>H. INICIAL</th>
+            <th>H. FINAL</th>
+            <th>HORAS FUERA</th>
+            <th>TOTAL HORAS</th>
+            <th>COMBUSTIBLE ABASTECIDO</th>
+            <th>HORAS RESTANTES DE COMBUSTIBLE</th>
+          </tr>
+        `;
+      }
 
       const orderedRowsData = orderedEquipos.map(eq => {
         const matches = sortedActiveData.filter(m => m.equipo.toLowerCase() === eq.toLowerCase());
@@ -1586,6 +1804,7 @@ function updateEquipoCheckboxesAndLabels() {
         const hInicial = validHIni.length > 0 ? validHIni[0].hInicial : null;
         const hFinal = validHFin.length > 0 ? validHFin[validHFin.length - 1].hFinal : null;
 
+        const horasFuera = matches.reduce((sum, m) => sum + (m.horasFuera || 0), 0);
         const totalHoras = matches.reduce((sum, m) => sum + m.totalHoras, 0);
         const combustible = matches.reduce((sum, m) => sum + m.combustible, 0);
 
@@ -1601,6 +1820,7 @@ function updateEquipoCheckboxesAndLabels() {
           unidad: eq,
           hInicial,
           hFinal,
+          horasFuera,
           totalHoras,
           mttoRaw: lastMtto ? lastMtto.mttoRaw : '',
           mttoNum: lastMtto ? lastMtto.horasRestantesMtto : null,
@@ -1614,10 +1834,12 @@ function updateEquipoCheckboxesAndLabels() {
       orderedRowsData.forEach(item => {
         const tr = document.createElement('tr');
 
-        const tdLugar = document.createElement('td');
-        tdLugar.className = 'td-lugar';
-        tdLugar.textContent = item.lugar;
-        tr.appendChild(tdLugar);
+        if (currentMode === 'maquinaria') {
+          const tdLugar = document.createElement('td');
+          tdLugar.className = 'td-lugar';
+          tdLugar.textContent = item.lugar;
+          tr.appendChild(tdLugar);
+        }
 
         const tdOperador = document.createElement('td');
         tdOperador.className = 'td-operador';
@@ -1625,8 +1847,13 @@ function updateEquipoCheckboxesAndLabels() {
         tr.appendChild(tdOperador);
 
         const tdUnidad = document.createElement('td');
-        tdUnidad.className = 'td-unidad';
-        tdUnidad.innerHTML = formatUnidadHTML(item.unidad);
+        if (currentMode === 'maquinaria') {
+          tdUnidad.className = 'td-unidad';
+          tdUnidad.innerHTML = formatUnidadHTML(item.unidad);
+        } else {
+          tdUnidad.className = 'td-placa';
+          tdUnidad.textContent = item.unidad;
+        }
         tr.appendChild(tdUnidad);
 
         const tdHIni = document.createElement('td');
@@ -1638,6 +1865,15 @@ function updateEquipoCheckboxesAndLabels() {
         tdHFin.className = 'td-num';
         tdHFin.textContent = formatHorometro(item.hFinal);
         tr.appendChild(tdHFin);
+
+        if (currentMode === 'volquetes') {
+          const tdHFuera = document.createElement('td');
+          tdHFuera.className = 'td-num';
+          tdHFuera.textContent = item.horasFuera > 0
+            ? (Number.isInteger(item.horasFuera) ? String(item.horasFuera) : item.horasFuera.toFixed(1))
+            : '0';
+          tr.appendChild(tdHFuera);
+        }
 
         const tdTotal = document.createElement('td');
         tdTotal.className = 'td-num';
@@ -1657,34 +1893,36 @@ function updateEquipoCheckboxesAndLabels() {
         }
         tr.appendChild(tdTotal);
 
-        const tdMtto = document.createElement('td');
-        const rawUpper = item.mttoRaw.toUpperCase();
-        const isOverdue = rawUpper.includes('RETRASADO') || (item.mttoNum !== null && item.mttoNum < 0);
+        if (currentMode === 'maquinaria') {
+          const tdMtto = document.createElement('td');
+          const rawUpper = item.mttoRaw.toUpperCase();
+          const isOverdue = rawUpper.includes('RETRASADO') || (item.mttoNum !== null && item.mttoNum < 0);
 
-        if (item.mttoRaw === '') {
-          tdMtto.className = 'td-mtto-normal';
-          tdMtto.textContent = '';
-        } else if (isOverdue) {
-          tdMtto.className = 'td-mtto-overdue';
-          if (rawUpper.includes('RETRASADO')) {
-            tdMtto.textContent = item.mttoRaw;
+          if (item.mttoRaw === '') {
+            tdMtto.className = 'td-mtto-normal';
+            tdMtto.textContent = '';
+          } else if (isOverdue) {
+            tdMtto.className = 'td-mtto-overdue';
+            if (rawUpper.includes('RETRASADO')) {
+              tdMtto.textContent = item.mttoRaw;
+            } else {
+              const absHrs = Math.abs(item.mttoNum);
+              const hrsFmt = Number.isInteger(absHrs) ? String(absHrs) : absHrs.toFixed(1);
+              tdMtto.textContent = `MTTO RETRASADO POR ${hrsFmt} Horas`;
+            }
           } else {
-            const absHrs = Math.abs(item.mttoNum);
-            const hrsFmt = Number.isInteger(absHrs) ? String(absHrs) : absHrs.toFixed(1);
-            tdMtto.textContent = `MTTO RETRASADO POR ${hrsFmt} Horas`;
+            tdMtto.className = 'td-mtto-normal';
+            if (rawUpper.includes('HORA')) {
+              tdMtto.textContent = item.mttoRaw;
+            } else if (item.mttoNum !== null) {
+              const hrsFmt = Number.isInteger(item.mttoNum) ? String(item.mttoNum) : item.mttoNum.toFixed(1);
+              tdMtto.textContent = `${hrsFmt} Horas`;
+            } else {
+              tdMtto.textContent = item.mttoRaw;
+            }
           }
-        } else {
-          tdMtto.className = 'td-mtto-normal';
-          if (rawUpper.includes('HORA')) {
-            tdMtto.textContent = item.mttoRaw;
-          } else if (item.mttoNum !== null) {
-            const hrsFmt = Number.isInteger(item.mttoNum) ? String(item.mttoNum) : item.mttoNum.toFixed(1);
-            tdMtto.textContent = `${hrsFmt} Horas`;
-          } else {
-            tdMtto.textContent = item.mttoRaw;
-          }
+          tr.appendChild(tdMtto);
         }
-        tr.appendChild(tdMtto);
 
         const tdComb = document.createElement('td');
         tdComb.className = 'td-comb';
@@ -1788,7 +2026,8 @@ function updateEquipoCheckboxesAndLabels() {
           .replace(/[\/\\\s]+/g, '-')
           .replace(/[^a-zA-Z0-9_-]/g, '');
 
-        const fileName = `${prefix}_${scopeText || 'Maquinaria'}.png`;
+        const modeTag = currentMode === 'volquetes' ? 'Volquetes' : 'Maquinaria';
+        const fileName = `${prefix}_${modeTag}_${scopeText || 'Reporte'}.png`;
 
         await new Promise((resolve) => {
           canvasImage.toBlob((blob) => {
@@ -1837,7 +2076,7 @@ function updateEquipoCheckboxesAndLabels() {
     });
 
     // Inicializar
-    fetchSheetData();
+    fetchSheetData(true);
   </script>
 </body>
 </html>
