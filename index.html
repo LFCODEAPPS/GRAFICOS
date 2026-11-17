@@ -305,7 +305,7 @@
           <div class="sub" id="kpiPromedioHoras">Promedio: 0.0 h / turno activo</div>
         </div>
         <div class="kpi-card">
-          <div class="label" id="kpiCombLabel">Combustible Abastecido</div>
+          <div class="label" id="kpiCombLabel">Combustible Abastecido (Col. M)</div>
           <div class="value" id="kpiCombustible">0.0 Gal</div>
           <div class="sub" id="kpiGalPorHora">Ratio global: 0.00 Gal/h</div>
         </div>
@@ -337,7 +337,8 @@
   <script>
     const SHEET_ID = '1YL5wIhK9Po-Je5P96Nm0m4cqiLqx0FrhiRCttU3wA7Y';
     const GID = '1193959640';
-    const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${GID}`;
+    // Pedimos explícitamente las columnas A hasta S para asegurar que M sea siempre el índice 12
+    const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${GID}&tq=${encodeURIComponent('SELECT A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S')}`;
 
     // Orden exacto según Foto 3
     const ORDEN_EQUIPOS = [
@@ -364,7 +365,6 @@
       ORDEN_EQUIPOS.map((nombre, index) => [nombre.trim().toLowerCase(), index])
     );
 
-    // Normaliza variantes escritas con coma o número distinto en la hoja al nombre oficial de la Foto 3
     function normalizeEquipoName(rawName) {
       if (!rawName) return 'Sin Especificar';
       const clean = rawName.trim();
@@ -400,10 +400,13 @@
       'septiembre': 9, 'setiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
     };
 
-    function parseNum(val) {
-      if (val === null || val === undefined || val === '') return 0;
-      if (typeof val === 'number') return val;
-      const cleaned = String(val)
+    // Extrae el valor numérico real de la celda (prioriza cell.v numérico antes que texto formateado)
+    function parseCellNum(cell) {
+      if (!cell || cell.v === null || cell.v === undefined || cell.v === '') return 0;
+      if (typeof cell.v === 'number') return cell.v;
+
+      const rawStr = String(cell.v).trim();
+      const cleaned = rawStr
         .replace(/[^\d.,-]/g, '')
         .replace(',', '.');
       const num = parseFloat(cleaned);
@@ -462,10 +465,17 @@
           throw new Error('No se encontraron filas en la hoja.');
         }
 
+        // Verificar índice de Columna M (COMBUSTIBLE ABASTECIDO = índice 12)
+        const cols = data.table.cols || [];
+        let colMIndex = 12;
+        const foundCombIdx = cols.findIndex(col =>
+          col && col.label && col.label.toUpperCase().includes('COMBUSTIBLE ABASTECIDO')
+        );
+        if (foundCombIdx !== -1) colMIndex = foundCombIdx;
+
         rawRows = data.table.rows.map(r => {
           const c = r.c || [];
           const getVal = (idx) => (c[idx] && c[idx].v !== null && c[idx].v !== undefined) ? String(c[idx].v).trim() : '';
-          const getFmt = (idx) => (c[idx] ? (c[idx].f || c[idx].v) : '');
 
           const fechaObj = parseFecha(c[4]);
           const anio = getVal(1) || (fechaObj ? String(fechaObj.getFullYear()) : '');
@@ -483,17 +493,17 @@
             codigo: getVal(5),
             operador: getVal(6),
             equipo: normalizeEquipoName(getVal(7)),
-            hInicial: parseNum(getFmt(8)),
-            hFinal: parseNum(getFmt(9)),
-            totalHoras: parseNum(getFmt(10)),
-            horasRestantesMtto: c[11] && c[11].v !== null ? parseNum(getFmt(11)) : null,
-            combustible: parseNum(getFmt(12)),
-            galonesPorHora: parseNum(getFmt(13)),
-            rendimientoCombustible: parseNum(getFmt(14)),
-            horasRestantesComb: parseNum(getFmt(15)),
+            hInicial: parseCellNum(c[8]),
+            hFinal: parseCellNum(c[9]),
+            totalHoras: parseCellNum(c[10]),                                       // Columna K
+            horasRestantesMtto: c[11] && c[11].v !== null ? parseCellNum(c[11]) : null, // Columna L
+            combustible: parseCellNum(c[colMIndex]),                               // Columna M (COMBUSTIBLE ABASTECIDO)
+            galonesPorHora: parseCellNum(c[13]),                                   // Columna N
+            rendimientoCombustible: parseCellNum(c[14]),                           // Columna O
+            horasRestantesComb: parseCellNum(c[15]),                               // Columna P
             observaciones: getVal(16),
-            hMttoSiguiente: parseNum(getFmt(17)),
-            hMttoAnterior: parseNum(getFmt(18))
+            hMttoSiguiente: parseCellNum(c[17]),
+            hMttoAnterior: parseCellNum(c[18])
           };
         }).filter(row => row.codigo && row.codigo !== 'CODIGO');
 
@@ -583,7 +593,7 @@
       if (currentPeriod === 'daily') {
         scopeBadge.textContent = maxStr;
         document.getElementById('kpiHorasLabel').textContent = `Horas Trabajadas (${maxStr})`;
-        document.getElementById('kpiCombLabel').textContent = `Combustible Abastecido (${maxStr})`;
+        document.getElementById('kpiCombLabel').textContent = `Combustible Col. M (${maxStr})`;
       } else if (currentPeriod === 'weekly') {
         scopeBadge.textContent = 'Semanal';
         document.getElementById('kpiHorasLabel').textContent = 'Total Horas Trabajadas (Semanal)';
@@ -625,7 +635,7 @@
       if (charts.main) charts.main.destroy();
       const ctx = document.getElementById('mainTimeChart').getContext('2d');
 
-      // MODO DIARIO: Solo última fecha, ordenado estrictamente por Foto 3, combustible como línea punteada
+      // MODO DIARIO: Solo última fecha, ordenado por Foto 3, combustible (Col. M) como línea punteada
       if (currentPeriod === 'daily') {
         document.getElementById('mainChartTitle').textContent = 'Resumen diario de maquinaria horas y combustible';
 
@@ -639,10 +649,9 @@
           }
           const entry = statsByEquipo.get(officialName);
           entry.horas += r.totalHoras;
-          entry.combustible += r.combustible;
+          entry.combustible += r.combustible; // Valor tomado de Columna M
         });
 
-        // Solo muestra los 17 equipos de la Foto 3 en su orden exacto (y cualquier otro solo si tiene datos > 0)
         const ordered = [...statsByEquipo.entries()]
           .filter(([name, val]) => ORDEN_MAP.has(name.toLowerCase()) || val.horas > 0 || val.combustible > 0)
           .sort((a, b) => compareEquipos(a[0], b[0]));
