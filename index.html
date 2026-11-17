@@ -227,7 +227,7 @@
 
     .chart-wrapper {
       position: relative;
-      height: 440px;
+      height: 460px;
       width: 100%;
     }
 
@@ -302,17 +302,17 @@
         <div class="kpi-card">
           <div class="label" id="kpiHorasLabel">Total Horas Trabajadas</div>
           <div class="value" id="kpiHoras">0.0 h</div>
-          <div class="sub" id="kpiPromedioHoras">Promedio: 0.0 h / turno activo</div>
+          <div class="sub" id="kpiPromedioHoras">Promedio: 0.0 h / equipo activo</div>
         </div>
         <div class="kpi-card">
           <div class="label" id="kpiCombLabel">Combustible Abastecido (Col. M)</div>
           <div class="value" id="kpiCombustible">0.0 Gal</div>
-          <div class="sub" id="kpiGalPorHora">Ratio global: 0.00 Gal/h</div>
+          <div class="sub" id="kpiGalPorHora">Ratio: 0.00 Gal/h</div>
         </div>
         <div class="kpi-card">
           <div class="label">Equipos Activos (con horas &gt; 0)</div>
           <div class="value" id="kpiEquipos">0</div>
-          <div class="sub" id="kpiRegistros">0 registros filtrados</div>
+          <div class="sub" id="kpiRegistros">0 registros en vista</div>
         </div>
         <div class="kpi-card">
           <div class="label">Alertas Mantenimiento (&lt; 50h)</div>
@@ -337,10 +337,10 @@
   <script>
     const SHEET_ID = '1YL5wIhK9Po-Je5P96Nm0m4cqiLqx0FrhiRCttU3wA7Y';
     const GID = '1193959640';
-    // Sin cláusula tq para que Google devuelva todas las columnas íntegras con sus IDs nativos (A..S)
-    const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${GID}&headers=1`;
+    // Exportación CSV directa: conserva el 100% de celdas numéricas y de texto en la columna M
+    const CSV_EXPORT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
 
-    // Orden exacto según Foto 3
+    // Orden exacto solicitado (Foto 2 / Foto 3)
     const ORDEN_EQUIPOS = [
       'Excavadora 1 (336 D2L)',
       'Excavadora 2 (320)',
@@ -361,26 +361,35 @@
       'Pavimentadora 3'
     ];
 
+    // Limpia espacios múltiples, tabs o espacios Unicode invisibles
+    function cleanSpaces(str) {
+      return String(str || '')
+        .replace(/[\u00A0\u200B-\u200D\uFEFF]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
     const ORDEN_MAP = new Map(
-      ORDEN_EQUIPOS.map((nombre, index) => [nombre.trim().toLowerCase(), index])
+      ORDEN_EQUIPOS.map((nombre, index) => [cleanSpaces(nombre).toLowerCase(), index])
     );
 
     function normalizeEquipoName(rawName) {
-      if (!rawName) return 'Sin Especificar';
-      const clean = rawName.trim();
+      const clean = cleanSpaces(rawName);
+      if (!clean) return 'Sin Especificar';
       const lower = clean.toLowerCase();
 
-      if (lower === 'cargador f, (cat)' || lower === 'cargador f. (cat)') return 'Cargador F. (CAT)';
-      if (lower === 'cargador f, (komatsu)' || lower === 'cargador f. (komatsu)') return 'Cargador F. (KOMATSU)';
+      // Unificar variantes de puntuación o número de equipo
+      if (lower.includes('cargador f') && lower.includes('cat')) return 'Cargador F. (CAT)';
+      if (lower.includes('cargador f') && lower.includes('komatsu')) return 'Cargador F. (KOMATSU)';
       if (lower === 'pavimentadora 2' || lower === 'pavimentadora 3') return 'Pavimentadora 3';
 
-      const found = ORDEN_EQUIPOS.find(o => o.toLowerCase() === lower);
+      const found = ORDEN_EQUIPOS.find(o => cleanSpaces(o).toLowerCase() === lower);
       return found || clean;
     }
 
     function getEquipoOrderIndex(equipoName) {
-      const normalized = normalizeEquipoName(equipoName).toLowerCase();
-      return ORDEN_MAP.has(normalized) ? ORDEN_MAP.get(normalized) : 9999;
+      const key = cleanSpaces(normalizeEquipoName(equipoName)).toLowerCase();
+      return ORDEN_MAP.has(key) ? ORDEN_MAP.get(key) : 9999;
     }
 
     function compareEquipos(a, b) {
@@ -400,49 +409,85 @@
       'septiembre': 9, 'setiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
     };
 
-    // Parser robusto: evalúa cell.v y cell.f para soportar números, fórmulas y texto con "Gal" o comas
-    function parseCellNum(cell) {
-      if (!cell) return 0;
+    // Parser CSV RFC-4180 que respeta comas dentro de comillas (ej. "9,2" o "118,50 Gal")
+    function parseCSV(text) {
+      const rows = [];
+      let row = [];
+      let cur = '';
+      let inQuotes = false;
 
-      // 1. Si cell.v ya es un número válido de JavaScript
-      if (typeof cell.v === 'number' && !isNaN(cell.v)) {
-        return cell.v;
-      }
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        const next = text[i + 1];
 
-      // 2. Revisar tanto cell.v como cell.f en formato string
-      const candidates = [cell.v, cell.f].filter(val => val !== null && val !== undefined && String(val).trim() !== '');
-      for (const raw of candidates) {
-        let str = String(raw).trim();
-        // Si tiene punto de miles y coma decimal (ej. "1.250,50 Gal") -> "1250.50"
-        if (str.includes('.') && str.includes(',')) {
-          str = str.replace(/\./g, '').replace(',', '.');
+        if (inQuotes) {
+          if (ch === '"' && next === '"') {
+            cur += '"';
+            i++;
+          } else if (ch === '"') {
+            inQuotes = false;
+          } else {
+            cur += ch;
+          }
         } else {
-          str = str.replace(',', '.');
-        }
-        // Extraer el primer número decimal válido (ej. "35.00 Gal" -> "35.00")
-        const match = str.match(/-?\d+(\.\d+)?/);
-        if (match) {
-          const num = parseFloat(match[0]);
-          if (!isNaN(num)) return num;
+          if (ch === '"') {
+            inQuotes = true;
+          } else if (ch === ',') {
+            row.push(cur);
+            cur = '';
+          } else if (ch === '\r' && next === '\n') {
+            row.push(cur);
+            rows.push(row);
+            row = [];
+            cur = '';
+            i++;
+          } else if (ch === '\n' || ch === '\r') {
+            row.push(cur);
+            rows.push(row);
+            row = [];
+            cur = '';
+          } else {
+            cur += ch;
+          }
         }
       }
-      return 0;
+      if (cur.length > 0 || row.length > 0) {
+        row.push(cur);
+        rows.push(row);
+      }
+      return rows;
     }
 
-    function parseFecha(cell) {
-      if (!cell) return null;
-      const raw = cell.f || cell.v;
-      if (!raw) return null;
+    // Extrae el valor numérico de strings como "35", "35,00", "118,50 Gal", "9,2"
+    function parseNum(val) {
+      if (val === null || val === undefined) return 0;
+      let str = cleanSpaces(val);
+      if (!str) return 0;
 
-      const str = String(raw).trim();
-      const gvizMatch = str.match(/^Date\((\d+),(\d+),(\d+)/);
-      if (gvizMatch) {
-        return new Date(parseInt(gvizMatch[1], 10), parseInt(gvizMatch[2], 10), parseInt(gvizMatch[3], 10));
+      if (str.includes('.') && str.includes(',')) {
+        str = str.replace(/\./g, '').replace(',', '.');
+      } else {
+        str = str.replace(',', '.');
       }
 
+      const match = str.match(/-?\d+(\.\d+)?/);
+      if (!match) return 0;
+      const num = parseFloat(match[0]);
+      return isNaN(num) ? 0 : num;
+    }
+
+    // Parsea fechas DD/MM/YYYY o D/M/YYYY
+    function parseFechaStr(rawStr) {
+      const str = cleanSpaces(rawStr);
+      if (!str) return null;
       const parts = str.split('/');
       if (parts.length === 3) {
-        return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+        const d = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        const y = parseInt(parts[2], 10);
+        if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+          return new Date(y, m, d);
+        }
       }
       return null;
     }
@@ -472,70 +517,45 @@
       errorBox.style.display = 'none';
 
       try {
-        const res = await fetch(GVIZ_URL);
-        const text = await res.text();
-        const jsonStr = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
-        const data = JSON.parse(jsonStr);
+        const res = await fetch(`${CSV_EXPORT_URL}&t=${Date.now()}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const csvText = await res.text();
+        const matrix = parseCSV(csvText);
 
-        if (!data.table || !data.table.rows) {
-          throw new Error('No se encontraron filas en la hoja.');
+        if (matrix.length < 2) {
+          throw new Error('La hoja no contiene suficientes filas.');
         }
 
-        const cols = data.table.cols || [];
-        // Localizar columnas por su letra nativa de Google Sheets (col.id) o por encabezado
-        const findColIdx = (letter, keyword, fallbackIdx) => {
-          const byId = cols.findIndex(c => c && c.id && c.id.toUpperCase() === letter);
-          if (byId !== -1) return byId;
-          if (keyword) {
-            const byLabel = cols.findIndex(c => c && c.label && c.label.toUpperCase().includes(keyword));
-            if (byLabel !== -1) return byLabel;
-          }
-          return fallbackIdx;
-        };
-
-        const idxLugar   = findColIdx('A', 'LUGAR', 0);
-        const idxAnio    = findColIdx('B', 'AÑO', 1);
-        const idxSem     = findColIdx('C', 'SEM', 2);
-        const idxMes     = findColIdx('D', 'MES', 3);
-        const idxFecha   = findColIdx('E', 'FECHA', 4);
-        const idxCodigo  = findColIdx('F', 'CODIGO', 5);
-        const idxOper    = findColIdx('G', 'OPERADOR', 6);
-        const idxEquipo  = findColIdx('H', 'EQUIPO', 7);
-        const idxHIni    = findColIdx('I', 'H. INICIAL', 8);
-        const idxHFin    = findColIdx('J', 'H. FINAL', 9);
-        const idxTotal   = findColIdx('K', 'TOTAL', 10);
-        const idxMtto    = findColIdx('L', 'HORAS RESTANTES PARA MTTO', 11);
-        const idxCombM   = findColIdx('M', 'COMBUSTIBLE ABASTECIDO', 12); // <-- Columna M exacta
-        const idxGalHora = findColIdx('N', 'GALONES POR HORA', 13);
-
-        rawRows = data.table.rows.map(r => {
-          const c = r.c || [];
-          const getVal = (idx) => (c[idx] && c[idx].v !== null && c[idx].v !== undefined) ? String(c[idx].v).trim() : '';
-
-          const fechaObj = parseFecha(c[idxFecha]);
-          const anio = getVal(idxAnio) || (fechaObj ? String(fechaObj.getFullYear()) : '');
-          const sem = parseInt(getVal(idxSem), 10) || 0;
-          const mes = getVal(idxMes);
+        // Fila 0 = Encabezados (A=0 .. S=18)
+        // A:LUGAR, B:AÑO, C:SEM, D:MES, E:FECHA, F:CODIGO, G:OPERADOR, H:EQUIPO,
+        // I:H.INICIAL, J:H.FINAL, K:TOTAL, L:HORAS RESTANTES PARA MTTO, M:COMBUSTIBLE ABASTECIDO
+        rawRows = matrix.slice(1).map(cols => {
+          const getCol = (idx) => cleanSpaces(cols[idx] || '');
+          const fechaObj = parseFechaStr(getCol(4));
+          const anio = getCol(1) || (fechaObj ? String(fechaObj.getFullYear()) : '');
+          const sem = parseInt(getCol(2), 10) || 0;
+          const mes = getCol(3);
+          const mttoRaw = getCol(11);
 
           return {
-            lugar: getVal(idxLugar) || 'SIN DATA',
+            lugar: getCol(0) || 'SIN DATA',
             anio: anio,
             sem: sem,
             mes: mes,
             fechaObj: fechaObj,
             fechaISO: formatDateISO(fechaObj),
             fechaStr: formatDateES(fechaObj),
-            codigo: getVal(idxCodigo),
-            operador: getVal(idxOper),
-            equipo: normalizeEquipoName(getVal(idxEquipo)),
-            hInicial: parseCellNum(c[idxHIni]),
-            hFinal: parseCellNum(c[idxHFin]),
-            totalHoras: parseCellNum(c[idxTotal]),
-            horasRestantesMtto: c[idxMtto] && c[idxMtto].v !== null ? parseCellNum(c[idxMtto]) : null,
-            combustible: parseCellNum(c[idxCombM]), // Datos extraídos de Columna M
-            galonesPorHora: parseCellNum(c[idxGalHora])
+            codigo: getCol(5),
+            operador: getCol(6),
+            equipo: normalizeEquipoName(getCol(7)),
+            hInicial: parseNum(getCol(8)),
+            hFinal: parseNum(getCol(9)),
+            totalHoras: parseNum(getCol(10)),                     // Columna K
+            horasRestantesMtto: mttoRaw !== '' ? parseNum(mttoRaw) : null, // Columna L
+            combustible: parseNum(getCol(12)),                    // Columna M (COMBUSTIBLE ABASTECIDO)
+            galonesPorHora: parseNum(getCol(13))                  // Columna N
           };
-        }).filter(row => row.codigo && row.codigo !== 'CODIGO');
+        }).filter(row => row.codigo && row.codigo.toUpperCase() !== 'CODIGO');
 
         populateFilterOptions();
         updateDashboard();
@@ -661,11 +681,44 @@
       renderMainChart(activeData);
     }
 
+    // Plugin ligero para mostrar valores encima de las barras de horas y puntos de combustible
+    const valueLabelsPlugin = {
+      id: 'valueLabelsPlugin',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        ctx.save();
+        ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'center';
+
+        chart.data.datasets.forEach((dataset, datasetIndex) => {
+          const meta = chart.getDatasetMeta(datasetIndex);
+          if (meta.hidden) return;
+
+          meta.data.forEach((element, index) => {
+            const val = dataset.data[index];
+            if (!val || val <= 0) return;
+
+            const text = Number.isInteger(val) ? String(val) : val.toFixed(1);
+            if (dataset.type === 'line') {
+              // Etiqueta para combustible (línea punteada)
+              ctx.fillStyle = '#38bdf8';
+              ctx.fillText(`${text}g`, element.x, element.y - 10);
+            } else {
+              // Etiqueta para horas (barras)
+              ctx.fillStyle = '#f8fafc';
+              ctx.fillText(text, element.x, element.y - 6);
+            }
+          });
+        });
+        ctx.restore();
+      }
+    };
+
     function renderMainChart(data) {
       if (charts.main) charts.main.destroy();
       const ctx = document.getElementById('mainTimeChart').getContext('2d');
 
-      // MODO DIARIO: Solo última fecha, ordenado por Foto 3, combustible (Col. M) como línea punteada
+      // MODO DIARIO: Solo última fecha, ordenado estrictamente por los 17 equipos, combustible Col. M en línea punteada
       if (currentPeriod === 'daily') {
         document.getElementById('mainChartTitle').textContent = 'Resumen diario de maquinaria horas y combustible';
 
@@ -679,15 +732,17 @@
           }
           const entry = statsByEquipo.get(officialName);
           entry.horas += r.totalHoras;
-          entry.combustible += r.combustible;
+          entry.combustible += r.combustible; // Columna M
         });
 
+        // Ordenar estrictamente según ORDEN_EQUIPOS
         const ordered = [...statsByEquipo.entries()]
-          .filter(([name, val]) => ORDEN_MAP.has(name.toLowerCase()) || val.horas > 0 || val.combustible > 0)
+          .filter(([name, val]) => ORDEN_MAP.has(cleanSpaces(name).toLowerCase()) || val.horas > 0 || val.combustible > 0)
           .sort((a, b) => compareEquipos(a[0], b[0]));
 
         charts.main = new Chart(ctx, {
           type: 'bar',
+          plugins: [valueLabelsPlugin],
           data: {
             labels: ordered.map(e => e[0]),
             datasets: [
@@ -720,6 +775,7 @@
           options: {
             responsive: true,
             maintainAspectRatio: false,
+            layout: { padding: { top: 22 } },
             interaction: { mode: 'index', intersect: false },
             plugins: {
               legend: {
@@ -744,6 +800,7 @@
                 type: 'linear',
                 position: 'left',
                 beginAtZero: true,
+                suggestedMax: 12,
                 title: { display: true, text: 'Horas (h)', color: '#f59e0b' },
                 ticks: { color: '#94a3b8' },
                 grid: { color: 'rgba(51,65,85,0.4)' }
@@ -799,6 +856,7 @@
 
       charts.main = new Chart(ctx, {
         type: 'bar',
+        plugins: [valueLabelsPlugin],
         data: {
           labels: sortedEntries.map(e => e.label),
           datasets: [
@@ -829,6 +887,7 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          layout: { padding: { top: 22 } },
           interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: { labels: { color: '#f8fafc', usePointStyle: true } }
