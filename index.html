@@ -122,7 +122,7 @@
       cursor: wait;
     }
 
-    /* Botones discretos de descarga individual por bloque */
+    /* Botones discretos de descarga individual */
     .btn-mini-export {
       background: #f8fafc;
       color: #334155;
@@ -183,6 +183,7 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
+      position: relative;
     }
 
     .control-group label {
@@ -208,6 +209,77 @@
     select:focus {
       border-color: var(--accent);
       background: #ffffff;
+    }
+
+    /* Dropdown Multiselect personalizado para Equipos */
+    .multiselect-dropdown {
+      position: relative;
+      width: 100%;
+    }
+
+    .multiselect-btn {
+      width: 100%;
+      background: #f8fafc;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      outline: none;
+    }
+
+    .multiselect-btn:hover, .multiselect-btn:focus {
+      border-color: var(--accent);
+      background: #ffffff;
+    }
+
+    .multiselect-content {
+      display: none;
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      width: 100%;
+      max-height: 280px;
+      overflow-y: auto;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      z-index: 100;
+      padding: 8px;
+    }
+
+    .multiselect-content.show {
+      display: block;
+    }
+
+    .multiselect-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: var(--text);
+      cursor: pointer;
+      border-radius: 6px;
+    }
+
+    .multiselect-item:hover {
+      background: #f1f5f9;
+    }
+
+    .multiselect-item input[type="checkbox"] {
+      cursor: pointer;
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
     }
 
     .period-tabs {
@@ -540,7 +612,7 @@
     <div id="loader">Conectando con Google Sheets y procesando registros...</div>
 
     <div id="dashboardContent" style="display: none;">
-      <!-- Filtros: Vista Temporal + Selector Dinámico (Fecha / Semana / Mes) + Lugar + Equipo -->
+      <!-- Filtros: Vista Temporal + Selector Dinámico + Lugar + Selector Múltiple de Equipos -->
       <div class="controls-panel">
         <div class="control-group">
           <label>Vista Temporal</label>
@@ -562,8 +634,19 @@
         </div>
 
         <div class="control-group">
-          <label for="filterEquipo">Equipo (Orden de Flota)</label>
-          <select id="filterEquipo"><option value="ALL">Todos los equipos</option></select>
+          <label>Equipo (Orden de Flota - Múltiple)</label>
+          <div class="multiselect-dropdown" id="equipoMultiselect">
+            <button type="button" class="multiselect-btn" onclick="toggleEquipoDropdown(event)">
+              <span id="equipoBtnLabel">Todos los equipos</span>
+              <span>▼</span>
+            </button>
+            <div class="multiselect-content" id="equipoDropdownContent">
+              <label class="multiselect-item" style="border-bottom: 1px solid #e2e8f0; font-weight: 700; margin-bottom: 4px;">
+                <input type="checkbox" id="selectAllEquipos" onchange="toggleSelectAllEquipos(this)"> Todos los equipos
+              </label>
+              <div id="equipoCheckboxList"></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -886,10 +969,6 @@
           throw new Error('La hoja no contiene suficientes filas.');
         }
 
-        // Columnas Google Sheets:
-        // A(0):LUGAR, B(1):AÑO, C(2):SEM, D(3):MES, E(4):FECHA, F(5):CODIGO, G(6):OPERADOR, H(7):UNIDAD/EQUIPO,
-        // I(8):H.INICIAL, J(9):H.FINAL, K(10):TOTAL HORAS, L(11):HORAS RESTANTES PARA MTTO,
-        // M(12):COMBUSTIBLE ABASTECIDO, N(13):GAL/H, O(14):RENDIMIENTO, P(15):HORAS RESTANTES DE COMBUSTIBLE
         rawRows = matrix.slice(1).map((cols, rowIdx) => {
           const getCol = (idx) => cleanSpaces(cols[idx] || '');
           const fechaObj = parseFechaStr(getCol(4));
@@ -911,18 +990,18 @@
             fechaISO: formatDateISO(fechaObj),
             fechaStr: formatDateES(fechaObj),
             codigo: getCol(5),
-            operador: getCol(6),                                                    // Columna G
-            equipo: normalizeEquipoName(getCol(7)),                                 // Columna H
+            operador: getCol(6),
+            equipo: normalizeEquipoName(getCol(7)),
             hIniRaw: hIniRaw,
-            hInicial: hIniRaw !== '' ? parseNum(hIniRaw) : null,                    // Columna I
+            hInicial: hIniRaw !== '' ? parseNum(hIniRaw) : null,
             hFinRaw: hFinRaw,
-            hFinal: hFinRaw !== '' ? parseNum(hFinRaw) : null,                      // Columna J
-            totalHoras: parseNum(getCol(10)),                                       // Columna K
-            mttoRaw: mttoRaw,                                                       // Columna L texto
-            horasRestantesMtto: mttoRaw !== '' ? parseNum(mttoRaw) : null,          // Columna L número
-            combustible: parseNum(getCol(12)),                                      // Columna M
-            combRestRaw: combRestRaw,                                               // Columna P texto
-            horasRestantesComb: combRestRaw !== '' ? parseNum(combRestRaw) : null   // Columna P número
+            hFinal: hFinRaw !== '' ? parseNum(hFinRaw) : null,
+            totalHoras: parseNum(getCol(10)),
+            mttoRaw: mttoRaw,
+            horasRestantesMtto: mttoRaw !== '' ? parseNum(mttoRaw) : null,
+            combustible: parseNum(getCol(12)),
+            combRestRaw: combRestRaw,
+            horasRestantesComb: combRestRaw !== '' ? parseNum(combRestRaw) : null
           };
         }).filter(row => row.codigo && row.codigo.toUpperCase() !== 'CODIGO');
 
@@ -943,27 +1022,80 @@
     }
 
     function populateStaticFilters() {
-      const fillSelect = (id, values, defaultLabel, customSort = null) => {
-        const sel = document.getElementById(id);
-        const current = sel.value;
-        sel.innerHTML = `<option value="ALL">${defaultLabel}</option>`;
-        const unique = [...new Set(values)].filter(Boolean);
-        if (customSort) {
-          unique.sort(customSort);
-        } else {
-          unique.sort();
-        }
-        unique.forEach(v => {
-          const opt = document.createElement('option');
-          opt.value = v;
-          opt.textContent = v;
-          sel.appendChild(opt);
-        });
-        if ([...sel.options].some(o => o.value === current)) sel.value = current;
-      };
+      // Lugar
+      const selLugar = document.getElementById('filterLugar');
+      const currentLugar = selLugar.value;
+      selLugar.innerHTML = '<option value="ALL">Todos los lugares</option>';
+      allLugares.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        selLugar.appendChild(opt);
+      });
+      if ([...selLugar.options].some(o => o.value === currentLugar)) selLugar.value = currentLugar;
 
-      fillSelect('filterLugar', allLugares, 'Todos los lugares');
-      fillSelect('filterEquipo', [...ORDEN_EQUIPOS, ...rawRows.map(r => r.equipo)], 'Todos los equipos', compareEquipos);
+      // Equipos Checkboxes Múltiples
+      const allEquiposList = [...new Set([...ORDEN_EQUIPOS, ...rawRows.map(r => r.equipo)])].filter(Boolean).sort(compareEquipos);
+      const container = document.getElementById('equipoCheckboxList');
+      container.innerHTML = '';
+
+      allEquiposList.forEach(eq => {
+        const lbl = document.createElement('label');
+        lbl.className = 'multiselect-item';
+        lbl.innerHTML = `<input type="checkbox" class="equipo-chk" value="${eq}" checked onchange="onEquipoCheckboxChange()"> ${eq}`;
+        container.appendChild(lbl);
+      });
+
+      document.getElementById('selectAllEquipos').checked = true;
+      updateEquipoButtonLabel();
+    }
+
+    function toggleEquipoDropdown(e) {
+      e.stopPropagation();
+      const content = document.getElementById('equipoDropdownContent');
+      content.classList.toggle('show');
+    }
+
+    // Cerrar dropdown al hacer clic fuera
+    window.addEventListener('click', (e) => {
+      const dropdown = document.getElementById('equipoMultiselect');
+      if (dropdown && !dropdown.contains(e.target)) {
+        document.getElementById('equipoDropdownContent').classList.remove('show');
+      }
+    });
+
+    function toggleSelectAllEquipos(masterChk) {
+      const chks = document.querySelectorAll('.equipo-chk');
+      chks.forEach(chk => chk.checked = masterChk.checked);
+      updateEquipoButtonLabel();
+      updateDashboard();
+    }
+
+    function onEquipoCheckboxChange() {
+      const chks = document.querySelectorAll('.equipo-chk');
+      const allChecked = [...chks].every(c => c.checked);
+      document.getElementById('selectAllEquipos').checked = allChecked;
+      updateEquipoButtonLabel();
+      updateDashboard();
+    }
+
+    function getSelectedEquipos() {
+      const chks = document.querySelectorAll('.equipo-chk:checked');
+      return [...chks].map(c => c.value);
+    }
+
+    function updateEquipoButtonLabel() {
+      const chks = document.querySelectorAll('.equipo-chk');
+      const checked = document.querySelectorAll('.equipo-chk:checked');
+      const lbl = document.getElementById('equipoBtnLabel');
+
+      if (checked.length === chks.length || checked.length === 0) {
+        lbl.textContent = 'Todos los equipos';
+      } else if (checked.length === 1) {
+        lbl.textContent = checked[0].value;
+      } else {
+        lbl.textContent = `${checked.length} equipos seleccionados`;
+      }
     }
 
     function populateTemporalSelector(preserveSelection = false) {
@@ -1062,11 +1194,11 @@
 
       const selectedTemporal = document.getElementById('filterTemporal').value;
       const selectedLugar = document.getElementById('filterLugar').value;
-      const selectedEquipo = document.getElementById('filterEquipo').value;
+      const selectedEquiposArr = getSelectedEquipos();
 
       const baseFiltered = rawRows.filter(r => {
         if (selectedLugar !== 'ALL' && r.lugar !== selectedLugar) return false;
-        if (selectedEquipo !== 'ALL' && r.equipo !== selectedEquipo) return false;
+        if (selectedEquiposArr.length > 0 && !selectedEquiposArr.includes(r.equipo)) return false;
         return true;
       });
 
@@ -1099,8 +1231,8 @@
       document.getElementById('tableScopeDate').textContent = scopeLabel || '-';
       document.getElementById('tableBannerTitle').textContent = theme.tableTitle;
 
-      renderMainChart(activeData, theme, selectedEquipo);
-      renderReportTable(activeData, selectedEquipo, selectedLugar);
+      renderMainChart(activeData, theme, selectedEquiposArr);
+      renderReportTable(activeData, selectedEquiposArr, selectedLugar);
     }
 
     function drawPillBadge(ctx, text, centerX, centerY, bgColor, textColor, borderColor = '#ffffff') {
@@ -1226,18 +1358,13 @@
       }
     };
 
-    function renderMainChart(data, theme, selectedEquipo) {
+    function renderMainChart(data, theme, selectedEquiposArr) {
       if (charts.main) charts.main.destroy();
       const ctx = document.getElementById('mainTimeChart').getContext('2d');
 
-      const targetEquipos = selectedEquipo === 'ALL'
-        ? [...ORDEN_EQUIPOS]
-        : [selectedEquipo];
-
-      const extraEquipos = [...new Set(data.map(r => normalizeEquipoName(r.equipo)))]
-        .filter(eq => selectedEquipo === 'ALL' && !targetEquipos.some(t => t.toLowerCase() === eq.toLowerCase()));
-
-      const orderedEquipos = [...targetEquipos, ...extraEquipos].sort(compareEquipos);
+      const allPossibleEquipos = [...new Set([...ORDEN_EQUIPOS, ...rawRows.map(r => r.equipo)])].sort(compareEquipos);
+      const targetEquipos = selectedEquiposArr.length > 0 ? selectedEquiposArr : allPossibleEquipos;
+      const orderedEquipos = targetEquipos.sort(compareEquipos);
 
       const activeLugaresSet = new Set();
       data.forEach(r => {
@@ -1415,18 +1542,13 @@
       return Number.isInteger(val) ? String(val) : val.toFixed(1);
     }
 
-    function renderReportTable(activeData, selectedEquipo, selectedLugar) {
+    function renderReportTable(activeData, selectedEquiposArr, selectedLugar) {
       const tbody = document.getElementById('reportTableBody');
       tbody.innerHTML = '';
 
-      const targetEquipos = selectedEquipo === 'ALL'
-        ? [...ORDEN_EQUIPOS]
-        : [selectedEquipo];
-
-      const extraEquipos = [...new Set(activeData.map(r => normalizeEquipoName(r.equipo)))]
-        .filter(eq => selectedEquipo === 'ALL' && !targetEquipos.some(t => t.toLowerCase() === eq.toLowerCase()));
-
-      let orderedEquipos = [...targetEquipos, ...extraEquipos].sort(compareEquipos);
+      const allPossibleEquipos = [...new Set([...ORDEN_EQUIPOS, ...rawRows.map(r => r.equipo)])].sort(compareEquipos);
+      let orderedEquipos = selectedEquiposArr.length > 0 ? selectedEquiposArr : allPossibleEquipos;
+      orderedEquipos.sort(compareEquipos);
 
       if (selectedLugar !== 'ALL') {
         const equiposEnLugar = new Set(activeData.map(r => normalizeEquipoName(r.equipo)));
@@ -1457,28 +1579,23 @@
           };
         }
 
-        // Lugares únicos (Columna A)
         const lugaresUnicos = [...new Set(matches.map(m => m.lugar).filter(l => l && l !== 'SIN DATA'))];
         const lugarStr = lugaresUnicos.length > 0 ? lugaresUnicos.join(' / ') : matches[0].lugar;
 
-        // Operador (Columna G): Mostrar únicamente el ÚLTIMO operador que operó la unidad
         const operatedWithOp = matches.filter(m => m.totalHoras > 0 && cleanSpaces(m.operador) !== '');
         const allValidOps = matches.map(m => cleanSpaces(m.operador)).filter(Boolean);
         const operadorStr = operatedWithOp.length > 0
           ? cleanSpaces(operatedWithOp[operatedWithOp.length - 1].operador)
           : (allValidOps.length > 0 ? allValidOps[allValidOps.length - 1] : '-');
 
-        // H. Inicial (Columna I) y H. Final (Columna J)
         const validHIni = matches.filter(m => m.hInicial !== null);
         const validHFin = matches.filter(m => m.hFinal !== null);
         const hInicial = validHIni.length > 0 ? validHIni[0].hInicial : null;
         const hFinal = validHFin.length > 0 ? validHFin[validHFin.length - 1].hFinal : null;
 
-        // Total Horas (Columna K) y Combustible Abastecido (Columna M)
         const totalHoras = matches.reduce((sum, m) => sum + m.totalHoras, 0);
         const combustible = matches.reduce((sum, m) => sum + m.combustible, 0);
 
-        // Mantenimiento (Columna L) y Horas Restantes Combustible (Columna P)
         const validMtto = matches.filter(m => m.mttoRaw !== '');
         const lastMtto = validMtto.length > 0 ? validMtto[validMtto.length - 1] : null;
 
@@ -1504,37 +1621,31 @@
       rowsToRender.forEach(item => {
         const tr = document.createElement('tr');
 
-        // 1. LUGAR (Columna A)
         const tdLugar = document.createElement('td');
         tdLugar.className = 'td-lugar';
         tdLugar.textContent = item.lugar;
         tr.appendChild(tdLugar);
 
-        // 2. OPERADOR (Columna G - último que operó)
         const tdOperador = document.createElement('td');
         tdOperador.className = 'td-operador';
         tdOperador.textContent = item.operador;
         tr.appendChild(tdOperador);
 
-        // 3. UNIDAD (Columna H)
         const tdUnidad = document.createElement('td');
         tdUnidad.className = 'td-unidad';
         tdUnidad.innerHTML = formatUnidadHTML(item.unidad);
         tr.appendChild(tdUnidad);
 
-        // 4. H. INICIAL (Columna I)
         const tdHIni = document.createElement('td');
         tdHIni.className = 'td-num';
         tdHIni.textContent = formatHorometro(item.hInicial);
         tr.appendChild(tdHIni);
 
-        // 5. H. FINAL (Columna J)
         const tdHFin = document.createElement('td');
         tdHFin.className = 'td-num';
         tdHFin.textContent = formatHorometro(item.hFinal);
         tr.appendChild(tdHFin);
 
-        // 6. TOTAL HORAS (Columna K)
         const tdTotal = document.createElement('td');
         tdTotal.className = 'td-num';
         if (item.totalHoras > 0) {
@@ -1553,7 +1664,6 @@
         }
         tr.appendChild(tdTotal);
 
-        // 7. HORAS RESTANTES PARA MTTO (Columna L)
         const tdMtto = document.createElement('td');
         const rawUpper = item.mttoRaw.toUpperCase();
         const isOverdue = rawUpper.includes('RETRASADO') || (item.mttoNum !== null && item.mttoNum < 0);
@@ -1583,13 +1693,11 @@
         }
         tr.appendChild(tdMtto);
 
-        // 8. COMBUSTIBLE ABASTECIDO (Columna M)
         const tdComb = document.createElement('td');
         tdComb.className = 'td-comb';
         tdComb.textContent = item.combustible > 0 ? `${item.combustible.toFixed(2)} Gal` : '';
         tr.appendChild(tdComb);
 
-        // 9. HORAS RESTANTES DE COMBUSTIBLE (Columna P)
         const tdCombRest = document.createElement('td');
         tdCombRest.className = 'td-num';
         tdCombRest.textContent = item.combRestNum !== null ? item.combRestNum.toFixed(2) : '';
@@ -1599,7 +1707,6 @@
       });
     }
 
-    // Exportar el Gráfico, la Tabla o Ambos en Ultra HD (3x) y ancho completo sin ningún recorte
     async function downloadSectionAsImage(elementId, prefix, btnEl) {
       const target = document.getElementById(elementId);
       if (!target) return;
@@ -1615,13 +1722,11 @@
       const prevDPR = charts.main ? charts.main.options.devicePixelRatio : window.devicePixelRatio;
 
       try {
-        // 1. Calcular el ancho real necesario para que la tabla completa entre al 100% sin recortes
         const liveTable = document.querySelector('#tableCardBlock .report-table');
         const naturalTableWidth = liveTable ? Math.max(liveTable.scrollWidth, liveTable.offsetWidth, 1480) : 1480;
         const innerContentWidth = Math.max(1500, naturalTableWidth + 24);
-        const totalExportWidth = innerContentWidth + 48; // +24px padding izquierda/derecha
+        const totalExportWidth = innerContentWidth + 48;
 
-        // 2. Si el bloque incluye el gráfico, renderizar Chart.js temporalmente a ancho completo y DPR 3x (Ultra HD)
         let hdChartDataUrl = null;
         if (target.querySelector('#mainTimeChart') && charts.main && liveWrapper) {
           liveWrapper.style.width = `${innerContentWidth - 48}px`;
@@ -1631,7 +1736,6 @@
           hdChartDataUrl = charts.main.toBase64Image('image/png', 1.0);
         }
 
-        // 3. Crear contenedor fuera de pantalla con el ancho exacto calculado
         const offscreenWrapper = document.createElement('div');
         offscreenWrapper.style.position = 'fixed';
         offscreenWrapper.style.left = '-99999px';
@@ -1644,7 +1748,6 @@
         const clone = target.cloneNode(true);
         clone.style.width = `${innerContentWidth}px`;
 
-        // Reemplazar canvas del gráfico por su versión Ultra HD 3x
         const clonedCanvas = clone.querySelector('#mainTimeChart');
         if (hdChartDataUrl && clonedCanvas) {
           const img = document.createElement('img');
@@ -1655,7 +1758,6 @@
           clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
         }
 
-        // Liberar cualquier recorte u overflow en la tarjeta de tabla y su contenedor
         clone.querySelectorAll('.table-card, .table-responsive').forEach(el => {
           el.style.overflow = 'visible';
           el.style.width = '100%';
@@ -1670,13 +1772,12 @@
         offscreenWrapper.appendChild(clone);
         document.body.appendChild(offscreenWrapper);
 
-        // Esperar un frame para asegurar que las imágenes y estilos del clon estén pintados
         await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 60)));
 
         const fullHeight = offscreenWrapper.scrollHeight;
 
         const canvasImage = await html2canvas(offscreenWrapper, {
-          scale: 3, // Ultra HD (3x)
+          scale: 3,
           useCORS: true,
           backgroundColor: '#f1f5f9',
           width: totalExportWidth,
@@ -1696,7 +1797,6 @@
 
         const fileName = `${prefix}_${scopeText || 'Maquinaria'}.png`;
 
-        // Descargar como Blob PNG sin pérdida de calidad
         await new Promise((resolve) => {
           canvasImage.toBlob((blob) => {
             if (blob) {
@@ -1715,7 +1815,6 @@
       } catch (err) {
         alert(`No se pudo generar la imagen HD: ${err.message}`);
       } finally {
-        // Restaurar tamaño normal responsivo del gráfico en pantalla
         if (liveWrapper && charts.main) {
           liveWrapper.style.width = prevWrapperWidth;
           charts.main.options.devicePixelRatio = prevDPR;
@@ -1740,7 +1839,7 @@
       });
     });
 
-    ['filterTemporal', 'filterLugar', 'filterEquipo'].forEach(id => {
+    ['filterTemporal', 'filterLugar'].forEach(id => {
       document.getElementById(id).addEventListener('change', updateDashboard);
     });
 
