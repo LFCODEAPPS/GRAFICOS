@@ -228,6 +228,16 @@
       font-weight: 600;
     }
 
+    .date-tag {
+      background: var(--primary-soft);
+      color: var(--primary);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
     .chart-wrapper {
       position: relative;
       height: 360px;
@@ -320,9 +330,9 @@
       <!-- Filtros -->
       <div class="controls-panel">
         <div class="control-group">
-          <label>Agrupación Temporal</label>
+          <label>Vista Temporal</label>
           <div class="period-tabs" id="periodTabs">
-            <button data-period="daily" class="active">Diario</button>
+            <button data-period="daily" class="active">Diario (Última Fecha)</button>
             <button data-period="weekly">Semanal</button>
             <button data-period="monthly">Mensual</button>
           </div>
@@ -352,12 +362,12 @@
       <!-- KPIs -->
       <div class="kpi-grid">
         <div class="kpi-card">
-          <div class="label">Total Horas Trabajadas</div>
+          <div class="label" id="kpiHorasLabel">Total Horas Trabajadas</div>
           <div class="value" id="kpiHoras">0.0 h</div>
           <div class="sub" id="kpiPromedioHoras">Promedio: 0.0 h / turno activo</div>
         </div>
         <div class="kpi-card">
-          <div class="label">Combustible Abastecido</div>
+          <div class="label" id="kpiCombLabel">Combustible Abastecido</div>
           <div class="value" id="kpiCombustible">0.0 Gal</div>
           <div class="sub" id="kpiGalPorHora">Ratio global: 0.00 Gal/h</div>
         </div>
@@ -377,7 +387,8 @@
       <div class="charts-grid">
         <div class="chart-card col-12">
           <div class="chart-header">
-            <h2 id="mainChartTitle">Evolución Diaria: Horas Trabajadas vs. Combustible (Gal)</h2>
+            <h2 id="mainChartTitle">Detalle Diario: Horas Trabajadas vs. Combustible (Gal)</h2>
+            <span class="date-tag" id="activeScopeBadge">Cargando...</span>
           </div>
           <div class="chart-wrapper">
             <canvas id="mainTimeChart"></canvas>
@@ -386,7 +397,7 @@
 
         <div class="chart-card col-6">
           <div class="chart-header">
-            <h2>Horas Totales por Equipo (Orden de Flota)</h2>
+            <h2 id="equipoHorasTitle">Horas Totales por Equipo (Orden de Flota)</h2>
           </div>
           <div class="chart-wrapper-tall">
             <canvas id="equipoChart"></canvas>
@@ -395,7 +406,7 @@
 
         <div class="chart-card col-6">
           <div class="chart-header">
-            <h2>Combustible Abastecido (Gal) por Equipo</h2>
+            <h2 id="equipoCombTitle">Combustible Abastecido (Gal) por Equipo</h2>
           </div>
           <div class="chart-wrapper-tall">
             <canvas id="combustibleEquipoChart"></canvas>
@@ -404,7 +415,7 @@
 
         <div class="chart-card col-12">
           <div class="chart-header">
-            <h2>Horas Restantes para Mantenimiento (Orden de Flota)</h2>
+            <h2>Horas Restantes para Mantenimiento (Último Estado por Equipo)</h2>
           </div>
           <div class="chart-wrapper-tall">
             <canvas id="mttoChart"></canvas>
@@ -412,10 +423,10 @@
         </div>
       </div>
 
-      <!-- Tabla de Últimos Registros -->
+      <!-- Tabla de Registros -->
       <div class="table-card">
         <div class="chart-header">
-          <h2>Últimos 25 Registros Filtrados</h2>
+          <h2 id="tableTitle">Registros de la Última Fecha</h2>
         </div>
         <table>
           <thead>
@@ -445,7 +456,7 @@
     const GID = '1193959640';
     const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${GID}`;
 
-    // Orden oficial exacto de los equipos según la lista proporcionada
+    // Orden oficial exacto de los equipos
     const ORDEN_EQUIPOS = [
       'Excavadora 1 (336 D2L)',
       'Excavadora 2 (320)',
@@ -522,7 +533,7 @@
     }
 
     function formatDateISO(dateObj) {
-      if (!dateObj || isNaN(dateObj)) return 'Sin Fecha';
+      if (!dateObj || isNaN(dateObj)) return '';
       const y = dateObj.getFullYear();
       const m = String(dateObj.getMonth() + 1).padStart(2, '0');
       const d = String(dateObj.getDate()).padStart(2, '0');
@@ -627,7 +638,6 @@
       fillSelect('filterAnio', rawRows.map(r => r.anio), 'Todos los años');
       fillSelect('filterEquipo', rawRows.map(r => r.equipo), 'Todos los equipos', compareEquipos);
 
-      // Ordenar códigos según el equipo al que pertenecen
       const codigoToEquipo = new Map();
       rawRows.forEach(r => {
         if (r.codigo && r.equipo) codigoToEquipo.set(r.codigo, r.equipo);
@@ -653,18 +663,62 @@
       });
     }
 
-    function updateDashboard() {
-      const data = getFilteredData();
+    // Obtiene la fecha ISO más reciente dentro del conjunto filtrado
+    function getLatestDateInfo(data) {
+      let maxISO = '';
+      let maxStr = '-';
+      data.forEach(r => {
+        if (r.fechaISO && r.fechaISO > maxISO) {
+          maxISO = r.fechaISO;
+          maxStr = r.fechaStr;
+        }
+      });
+      return { maxISO, maxStr };
+    }
 
-      // 1. Calcular KPIs
-      const totalHoras = data.reduce((acc, r) => acc + r.totalHoras, 0);
-      const totalComb = data.reduce((acc, r) => acc + r.combustible, 0);
-      const activeRows = data.filter(r => r.totalHoras > 0);
+    function updateDashboard() {
+      const baseData = getFilteredData();
+      const { maxISO, maxStr } = getLatestDateInfo(baseData);
+
+      // Si estamos en modo "daily", restringimos los datos ÚNICAMENTE a la última fecha disponible
+      const activeData = (currentPeriod === 'daily' && maxISO)
+        ? baseData.filter(r => r.fechaISO === maxISO)
+        : baseData;
+
+      // Actualizar etiquetas descriptivas según la vista
+      const scopeBadge = document.getElementById('activeScopeBadge');
+      if (currentPeriod === 'daily') {
+        scopeBadge.textContent = `Última fecha: ${maxStr}`;
+        document.getElementById('kpiHorasLabel').textContent = `Horas Trabajadas (${maxStr})`;
+        document.getElementById('kpiCombLabel').textContent = `Combustible Abastecido (${maxStr})`;
+        document.getElementById('equipoHorasTitle').textContent = `Horas por Equipo — ${maxStr}`;
+        document.getElementById('equipoCombTitle').textContent = `Combustible (Gal) por Equipo — ${maxStr}`;
+        document.getElementById('tableTitle').textContent = `Registros del Día (${maxStr})`;
+      } else if (currentPeriod === 'weekly') {
+        scopeBadge.textContent = 'Agrupado por Semana';
+        document.getElementById('kpiHorasLabel').textContent = 'Total Horas Trabajadas (Semanal)';
+        document.getElementById('kpiCombLabel').textContent = 'Combustible Abastecido (Semanal)';
+        document.getElementById('equipoHorasTitle').textContent = 'Horas Totales por Equipo (Orden de Flota)';
+        document.getElementById('equipoCombTitle').textContent = 'Combustible Abastecido (Gal) por Equipo';
+        document.getElementById('tableTitle').textContent = 'Últimos 25 Registros Filtrados';
+      } else {
+        scopeBadge.textContent = 'Agrupado por Mes';
+        document.getElementById('kpiHorasLabel').textContent = 'Total Horas Trabajadas (Mensual)';
+        document.getElementById('kpiCombLabel').textContent = 'Combustible Abastecido (Mensual)';
+        document.getElementById('equipoHorasTitle').textContent = 'Horas Totales por Equipo (Orden de Flota)';
+        document.getElementById('equipoCombTitle').textContent = 'Combustible Abastecido (Gal) por Equipo';
+        document.getElementById('tableTitle').textContent = 'Últimos 25 Registros Filtrados';
+      }
+
+      // 1. Calcular KPIs sobre activeData
+      const totalHoras = activeData.reduce((acc, r) => acc + r.totalHoras, 0);
+      const totalComb = activeData.reduce((acc, r) => acc + r.combustible, 0);
+      const activeRows = activeData.filter(r => r.totalHoras > 0);
       const uniqueActiveMachines = new Set(activeRows.map(r => r.codigo)).size;
 
-      // Último estado de mantenimiento por equipo/máquina
+      // Último estado de mantenimiento por máquina
       const latestByMachine = {};
-      data.forEach(r => {
+      baseData.forEach(r => {
         const key = `${r.equipo}__${r.codigo}`;
         if (!latestByMachine[key] || (r.fechaObj && (!latestByMachine[key].fechaObj || r.fechaObj >= latestByMachine[key].fechaObj))) {
           latestByMachine[key] = r;
@@ -674,32 +728,106 @@
       const alertasMtto = machineStatuses.filter(m => m.horasRestantesMtto !== null && m.horasRestantesMtto <= 50).length;
 
       document.getElementById('kpiHoras').textContent = `${totalHoras.toLocaleString('es-PE', { maximumFractionDigits: 1 })} h`;
-      document.getElementById('kpiPromedioHoras').textContent = `Promedio: ${(activeRows.length ? totalHoras / activeRows.length : 0).toFixed(1)} h / turno activo`;
+      document.getElementById('kpiPromedioHoras').textContent = `Promedio: ${(activeRows.length ? totalHoras / activeRows.length : 0).toFixed(1)} h / equipo activo`;
       document.getElementById('kpiCombustible').textContent = `${totalComb.toLocaleString('es-PE', { maximumFractionDigits: 1 })} Gal`;
-      document.getElementById('kpiGalPorHora').textContent = `Ratio global: ${(totalHoras > 0 ? totalComb / totalHoras : 0).toFixed(2)} Gal/h`;
+      document.getElementById('kpiGalPorHora').textContent = `Ratio: ${(totalHoras > 0 ? totalComb / totalHoras : 0).toFixed(2)} Gal/h`;
       document.getElementById('kpiEquipos').textContent = uniqueActiveMachines;
-      document.getElementById('kpiRegistros').textContent = `${data.length} registros filtrados`;
+      document.getElementById('kpiRegistros').textContent = `${activeData.length} registros en vista`;
       document.getElementById('kpiAlertasMtto').textContent = alertasMtto;
 
       // 2. Renderizar Gráficos
-      renderTimeChart(data);
-      renderEquipoCharts(data);
+      renderMainChart(activeData, maxStr);
+      renderEquipoCharts(activeData);
       renderMttoChart(machineStatuses);
-      renderTable(data);
+      renderTable(activeData);
     }
 
-    function renderTimeChart(data) {
-      const grouped = {};
+    function renderMainChart(data, maxStr) {
+      if (charts.main) charts.main.destroy();
+      const ctx = document.getElementById('mainTimeChart').getContext('2d');
 
+      // MODO DIARIO: Muestra solo la última fecha desglosada por cada equipo en el orden oficial
+      if (currentPeriod === 'daily') {
+        document.getElementById('mainChartTitle').textContent = `Jornada del ${maxStr}: Horas Trabajadas y Combustible por Equipo`;
+
+        const statsByEquipo = new Map();
+        ORDEN_EQUIPOS.forEach(eq => statsByEquipo.set(eq, { horas: 0, combustible: 0 }));
+
+        data.forEach(r => {
+          const eqRaw = r.equipo || 'Sin Especificar';
+          const officialName = ORDEN_EQUIPOS.find(o => o.toLowerCase() === eqRaw.toLowerCase()) || eqRaw;
+          if (!statsByEquipo.has(officialName)) {
+            statsByEquipo.set(officialName, { horas: 0, combustible: 0 });
+          }
+          const entry = statsByEquipo.get(officialName);
+          entry.horas += r.totalHoras;
+          entry.combustible += r.combustible;
+        });
+
+        const ordered = [...statsByEquipo.entries()]
+          .filter(([name, val]) => ORDEN_MAP.has(name.toLowerCase()) || val.horas > 0 || val.combustible > 0)
+          .sort((a, b) => compareEquipos(a[0], b[0]));
+
+        charts.main = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ordered.map(e => e[0]),
+            datasets: [
+              {
+                label: 'Horas Trabajadas (h)',
+                data: ordered.map(e => Number(e[1].horas.toFixed(1))),
+                backgroundColor: '#f59e0b',
+                borderRadius: 6,
+                yAxisID: 'y'
+              },
+              {
+                label: 'Combustible Abastecido (Gal)',
+                data: ordered.map(e => Number(e[1].combustible.toFixed(1))),
+                backgroundColor: '#38bdf8',
+                borderRadius: 6,
+                yAxisID: 'y1'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              legend: { labels: { color: '#f8fafc' } }
+            },
+            scales: {
+              x: {
+                ticks: { color: '#f8fafc', font: { size: 11 }, autoSkip: false, maxRotation: 45, minRotation: 30 },
+                grid: { color: 'rgba(51,65,85,0.4)' }
+              },
+              y: {
+                type: 'linear',
+                position: 'left',
+                title: { display: true, text: 'Horas (h)', color: '#f59e0b' },
+                ticks: { color: '#94a3b8' },
+                grid: { color: 'rgba(51,65,85,0.4)' }
+              },
+              y1: {
+                type: 'linear',
+                position: 'right',
+                title: { display: true, text: 'Combustible (Gal)', color: '#38bdf8' },
+                ticks: { color: '#94a3b8' },
+                grid: { drawOnChartArea: false }
+              }
+            }
+          }
+        });
+        return;
+      }
+
+      // MODO SEMANAL O MENSUAL: Evolución agrupada por semana o mes
+      const grouped = {};
       data.forEach(r => {
         let key = '';
         let sortKey = '';
 
-        if (currentPeriod === 'daily') {
-          if (!r.fechaObj) return;
-          key = r.fechaStr;
-          sortKey = r.fechaISO;
-        } else if (currentPeriod === 'weekly') {
+        if (currentPeriod === 'weekly') {
           if (!r.anio || !r.sem) return;
           key = `${r.anio} - Sem ${String(r.sem).padStart(2, '0')}`;
           sortKey = `${r.anio}-${String(r.sem).padStart(2, '0')}`;
@@ -719,23 +847,15 @@
         grouped[sortKey].combustible += r.combustible;
       });
 
-      let sortedEntries = Object.entries(grouped)
+      const sortedEntries = Object.entries(grouped)
         .sort((a, b) => a[0].localeCompare(b[0]))
         .map(entry => entry[1]);
 
-      if (currentPeriod === 'daily' && sortedEntries.length > 30) {
-        sortedEntries = sortedEntries.slice(-30);
-      }
+      document.getElementById('mainChartTitle').textContent =
+        currentPeriod === 'weekly'
+          ? 'Evolución Semanal: Horas Trabajadas vs. Combustible (Gal)'
+          : 'Evolución Mensual: Horas Trabajadas vs. Combustible (Gal)';
 
-      const titles = {
-        daily: 'Evolución Diaria (Últimos 30 días): Horas Trabajadas vs. Combustible (Gal)',
-        weekly: 'Evolución Semanal: Horas Trabajadas vs. Combustible (Gal)',
-        monthly: 'Evolución Mensual: Horas Trabajadas vs. Combustible (Gal)'
-      };
-      document.getElementById('mainChartTitle').textContent = titles[currentPeriod];
-
-      if (charts.main) charts.main.destroy();
-      const ctx = document.getElementById('mainTimeChart').getContext('2d');
       charts.main = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -789,19 +909,15 @@
       });
     }
 
-    // Gráficos de Horas y Combustible ordenados estrictamente por ORDEN_EQUIPOS
     function renderEquipoCharts(data) {
       const statsByEquipo = new Map();
 
-      // Inicializar los 17 equipos oficiales en el orden exacto
       ORDEN_EQUIPOS.forEach(eq => {
         statsByEquipo.set(eq, { horas: 0, combustible: 0 });
       });
 
-      // Sumar datos reales
       data.forEach(r => {
         const eqRaw = r.equipo || 'Sin Especificar';
-        // Buscar coincidencia insensible a mayúsculas con la lista oficial
         const officialName = ORDEN_EQUIPOS.find(o => o.toLowerCase() === eqRaw.toLowerCase()) || eqRaw;
         if (!statsByEquipo.has(officialName)) {
           statsByEquipo.set(officialName, { horas: 0, combustible: 0 });
@@ -811,7 +927,6 @@
         entry.combustible += r.combustible;
       });
 
-      // Mantener los 17 oficiales siempre visibles en orden, más cualquier otro que tenga > 0
       const orderedEntries = [...statsByEquipo.entries()]
         .filter(([name, val]) => ORDEN_MAP.has(name.toLowerCase()) || val.horas > 0 || val.combustible > 0)
         .sort((a, b) => compareEquipos(a[0], b[0]));
@@ -820,7 +935,6 @@
       const horasData = orderedEntries.map(e => Number(e[1].horas.toFixed(1)));
       const combData = orderedEntries.map(e => Number(e[1].combustible.toFixed(1)));
 
-      // Gráfico 1: Horas por Equipo
       if (charts.equipo) charts.equipo.destroy();
       const ctxHoras = document.getElementById('equipoChart').getContext('2d');
       charts.equipo = new Chart(ctxHoras, {
@@ -828,7 +942,7 @@
         data: {
           labels: labels,
           datasets: [{
-            label: 'Total Horas (h)',
+            label: 'Horas (h)',
             data: horasData,
             backgroundColor: '#10b981',
             borderRadius: 5
@@ -841,7 +955,7 @@
           plugins: { legend: { display: false } },
           scales: {
             x: {
-              title: { display: true, text: 'Horas Acumuladas (h)', color: '#94a3b8' },
+              title: { display: true, text: 'Horas (h)', color: '#94a3b8' },
               ticks: { color: '#94a3b8' },
               grid: { color: 'rgba(51,65,85,0.4)' }
             },
@@ -853,7 +967,6 @@
         }
       });
 
-      // Gráfico 2: Combustible por Equipo
       if (charts.combEquipo) charts.combEquipo.destroy();
       const ctxComb = document.getElementById('combustibleEquipoChart').getContext('2d');
       charts.combEquipo = new Chart(ctxComb, {
@@ -887,7 +1000,6 @@
       });
     }
 
-    // Gráfico de Mantenimiento ordenado por ORDEN_EQUIPOS
     function renderMttoChart(machineStatuses) {
       const valid = machineStatuses
         .filter(m => m.horasRestantesMtto !== null && !isNaN(m.horasRestantesMtto))
@@ -932,14 +1044,15 @@
 
     function renderTable(data) {
       const tbody = document.getElementById('recentTableBody');
-      // Ordenar primero por fecha más reciente y, dentro de la misma fecha, por el orden oficial de equipos
       const sorted = [...data].sort((a, b) => {
         const diffFecha = (b.fechaObj || 0) - (a.fechaObj || 0);
         if (diffFecha !== 0) return diffFecha;
         return compareEquipos(a.equipo, b.equipo);
-      }).slice(0, 25);
+      });
 
-      tbody.innerHTML = sorted.map(r => {
+      const rowsToShow = currentPeriod === 'daily' ? sorted : sorted.slice(0, 25);
+
+      tbody.innerHTML = rowsToShow.map(r => {
         let mttoBadge = '-';
         if (r.horasRestantesMtto !== null) {
           const cls = r.horasRestantesMtto <= 30 ? 'pill-danger' : (r.horasRestantesMtto <= 80 ? 'pill-warn' : 'pill-ok');
