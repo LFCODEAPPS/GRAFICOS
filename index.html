@@ -262,7 +262,7 @@
     .multiselect-item {
       display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: space-between;
       padding: 7px 10px;
       font-size: 0.88rem;
       font-weight: 500;
@@ -275,11 +275,27 @@
       background: #f1f5f9;
     }
 
+    .multiselect-item-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     .multiselect-item input[type="checkbox"] {
       cursor: pointer;
       width: 16px;
       height: 16px;
       accent-color: var(--accent);
+    }
+
+    .badge-sin-datos {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #94a3b8;
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
     }
 
     .period-tabs {
@@ -642,7 +658,9 @@
             </button>
             <div class="multiselect-content" id="equipoDropdownContent">
               <label class="multiselect-item" style="border-bottom: 1px solid #e2e8f0; font-weight: 700; margin-bottom: 4px;">
-                <input type="checkbox" id="selectAllEquipos" onchange="toggleSelectAllEquipos(this)"> Todos los equipos
+                <div class="multiselect-item-left">
+                  <input type="checkbox" id="selectAllEquipos" onchange="toggleSelectAllEquipos(this)"> Todos los equipos
+                </div>
               </label>
               <div id="equipoCheckboxList"></div>
             </div>
@@ -1034,19 +1052,68 @@
       });
       if ([...selLugar.options].some(o => o.value === currentLugar)) selLugar.value = currentLugar;
 
-      // Equipos Checkboxes Múltiples
+      updateEquipoCheckboxesAndLabels();
+    }
+
+    function updateEquipoCheckboxesAndLabels() {
+      // Obtener datos del período actual seleccionado
+      const selectedTemporal = document.getElementById('filterTemporal').value;
+      const selectedLugar = document.getElementById('filterLugar').value;
+
+      let periodFilteredData = [];
+      if (currentPeriod === 'daily') {
+        periodFilteredData = rawRows.filter(r => r.fechaISO === selectedTemporal);
+      } else if (currentPeriod === 'weekly') {
+        const [targetAnio, targetSem] = selectedTemporal.split('||');
+        periodFilteredData = rawRows.filter(r =>
+          cleanSpaces(r.sem) === cleanSpaces(targetSem) &&
+          (!targetAnio || !r.anio || r.anio === targetAnio)
+        );
+      } else {
+        const [targetAnio, targetMesLower] = selectedTemporal.split('||');
+        periodFilteredData = rawRows.filter(r =>
+          cleanSpaces(r.mes).toLowerCase() === cleanSpaces(targetMesLower).toLowerCase() &&
+          (!targetAnio || !r.anio || r.anio === targetAnio)
+        );
+      }
+
+      if (selectedLugar !== 'ALL') {
+        periodFilteredData = periodFilteredData.filter(r => r.lugar === selectedLugar);
+      }
+
+      // Equipos con actividad en este período
+      const activeEquiposInPeriod = new Set(
+        periodFilteredData.filter(r => r.totalHoras > 0).map(r => r.equipo)
+      );
+
+      // Conservar estados actuales de selección
+      const currentChecked = new Set(
+        [...document.querySelectorAll('.equipo-chk:checked')].map(c => c.value)
+      );
+      const isFirstRender = currentChecked.size === 0;
+
       const allEquiposList = [...new Set([...ORDEN_EQUIPOS, ...rawRows.map(r => r.equipo)])].filter(Boolean).sort(compareEquipos);
       const container = document.getElementById('equipoCheckboxList');
       container.innerHTML = '';
 
       allEquiposList.forEach(eq => {
+        const hasData = activeEquiposInPeriod.has(eq);
+        const isChecked = isFirstRender ? true : currentChecked.has(eq);
+
         const lbl = document.createElement('label');
         lbl.className = 'multiselect-item';
-        lbl.innerHTML = `<input type="checkbox" class="equipo-chk" value="${eq}" checked onchange="onEquipoCheckboxChange()"> ${eq}`;
+        lbl.innerHTML = `
+          <div class="multiselect-item-left">
+            <input type="checkbox" class="equipo-chk" value="${eq}" ${isChecked ? 'checked' : ''} onchange="onEquipoCheckboxChange()"> ${eq}
+          </div>
+          ${!hasData ? '<span class="badge-sin-datos">Sin datos</span>' : ''}
+        `;
         container.appendChild(lbl);
       });
 
-      document.getElementById('selectAllEquipos').checked = true;
+      const allChks = document.querySelectorAll('.equipo-chk');
+      const allChecked = [...allChks].every(c => c.checked);
+      document.getElementById('selectAllEquipos').checked = allChecked;
       updateEquipoButtonLabel();
     }
 
@@ -1194,6 +1261,9 @@
       const selectedTemporal = document.getElementById('filterTemporal').value;
       const selectedLugar = document.getElementById('filterLugar').value;
       const selectedEquiposArr = getSelectedEquipos();
+
+      // Actualizar etiquetas de "Sin datos" en el dropdown según la fecha seleccionada
+      updateEquipoCheckboxesAndLabels();
 
       // 1. Filtrar primero por período temporal (Fecha, Semana o Mes)
       let activeData = [];
@@ -1363,7 +1433,6 @@
       if (charts.main) charts.main.destroy();
       const ctx = document.getElementById('mainTimeChart').getContext('2d');
 
-      // Extraer ÚNICAMENTE los equipos que tienen registros en este período filtrado
       const activeEquiposSet = new Set(activeData.map(r => normalizeEquipoName(r.equipo)));
       const orderedEquipos = [...activeEquiposSet].sort(compareEquipos);
 
