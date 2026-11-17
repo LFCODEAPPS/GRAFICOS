@@ -15,6 +15,9 @@
       --text-muted: #64748b;
       --accent: #f59e0b;
       --accent-text: #0f172a;
+      --mtto-header-bg: #b45309;
+      --mtto-header-text: #ffffff;
+      --mtto-cell-bg: #dbeafe;
       --badge-bg: #fef3c7;
       --badge-text: #b45309;
       --badge-border: #fcd34d;
@@ -170,35 +173,6 @@
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
     }
 
-    /* KPI Cards (3 columnas principales) */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-
-    .kpi-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 20px;
-    }
-
-    .kpi-card .label {
-      font-size: 0.82rem;
-      font-weight: 500;
-      color: var(--text-muted);
-      margin-bottom: 8px;
-    }
-
-    .kpi-card .value {
-      font-size: 1.85rem;
-      font-weight: 800;
-      color: var(--text);
-    }
-
     /* Chart Card */
     .chart-card {
       background: var(--surface);
@@ -208,6 +182,7 @@
       padding: 24px;
       display: flex;
       flex-direction: column;
+      margin-bottom: 24px;
     }
 
     .chart-header {
@@ -258,6 +233,181 @@
       position: relative;
       height: 550px;
       width: 100%;
+    }
+
+    /* Report Table Card */
+    .table-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .table-top-banner {
+      display: flex;
+      align-items: stretch;
+      background: #1e293b;
+      color: #ffffff;
+      border-bottom: 2px solid #0f172a;
+    }
+
+    .table-date-box {
+      background: #0f172a;
+      color: #ffffff;
+      font-size: 1.25rem;
+      font-weight: 800;
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-right: 2px solid #334155;
+      white-space: nowrap;
+      letter-spacing: 0.03em;
+    }
+
+    .table-banner-title {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 14px 20px;
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 768px) {
+      .table-top-banner {
+        flex-direction: column;
+      }
+      .table-date-box {
+        border-right: none;
+        border-bottom: 1px solid #334155;
+        padding: 10px 16px;
+      }
+    }
+
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    table.report-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      min-width: 980px;
+    }
+
+    table.report-table thead th {
+      background: var(--accent);
+      color: var(--accent-text);
+      font-weight: 800;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+      letter-spacing: 0.03em;
+      padding: 14px 12px;
+      text-align: center;
+      border: 1px solid rgba(15, 23, 42, 0.14);
+      line-height: 1.3;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    table.report-table thead th.th-mtto {
+      background: var(--mtto-header-bg);
+      color: var(--mtto-header-text);
+    }
+
+    table.report-table tbody td {
+      padding: 9px 12px;
+      border: 1px solid #e2e8f0;
+      color: #0f172a;
+      vertical-align: middle;
+    }
+
+    table.report-table tbody tr:hover td:not(.td-mtto-normal):not(.td-mtto-overdue) {
+      background-color: #f8fafc;
+    }
+
+    .td-lugar {
+      font-weight: 700;
+      font-size: 0.8rem;
+      color: #334155;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    .td-unidad {
+      text-align: left;
+      white-space: nowrap;
+      color: #0f172a;
+      font-weight: 500;
+    }
+
+    .td-num {
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    /* Mini barra horizontal dentro de TOTAL HORAS */
+    .hours-bar-cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-width: 105px;
+    }
+
+    .hours-bar-track {
+      flex: 1;
+      max-width: 68px;
+      height: 14px;
+      background: transparent;
+      display: flex;
+      align-items: center;
+    }
+
+    .hours-bar-fill {
+      height: 14px;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 0.25s ease, background 0.2s ease;
+    }
+
+    .hours-bar-value {
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      min-width: 32px;
+      text-align: right;
+    }
+
+    /* Celda HORAS RESTANTES PARA MTTO */
+    .td-mtto-normal {
+      background-color: var(--mtto-cell-bg);
+      color: #0f172a;
+      text-align: center;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .td-mtto-overdue {
+      background-color: #fee2e2;
+      color: #dc2626;
+      text-align: center;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .td-comb {
+      text-align: center;
+      font-weight: 700;
+      color: #0f172a;
+      white-space: nowrap;
     }
 
     #loader {
@@ -321,22 +471,6 @@
         </div>
       </div>
 
-      <!-- KPIs (3 indicadores principales) -->
-      <div class="kpi-grid">
-        <div class="kpi-card">
-          <div class="label" id="kpiHorasLabel">Total Horas Trabajadas</div>
-          <div class="value" id="kpiHoras">0.0 h</div>
-        </div>
-        <div class="kpi-card">
-          <div class="label" id="kpiCombLabel">Combustible Col. M</div>
-          <div class="value" id="kpiCombustible">0.0 Gal</div>
-        </div>
-        <div class="kpi-card">
-          <div class="label">Equipos Activos (con horas &gt; 0)</div>
-          <div class="value" id="kpiEquipos">0</div>
-        </div>
-      </div>
-
       <!-- Gráfico Único -->
       <div class="chart-card">
         <div class="chart-header">
@@ -345,6 +479,33 @@
         </div>
         <div class="chart-wrapper">
           <canvas id="mainTimeChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Tabla Detallada debajo del gráfico -->
+      <div class="table-card">
+        <div class="table-top-banner">
+          <div class="table-date-box" id="tableScopeDate">-</div>
+          <div class="table-banner-title" id="tableBannerTitle">
+            REPORTE DIARIO MAQUINARIA (HORAS, COMBUSTIBLE Y HORAS RESTANTES PARA MTTO)
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th>LUGAR</th>
+                <th>UNIDAD</th>
+                <th>H. INICIAL</th>
+                <th>H. FINAL</th>
+                <th>TOTAL HORAS</th>
+                <th class="th-mtto">HORAS RESTANTES PARA MTTO</th>
+                <th>COMBUSTIBLE ABASTECIDO</th>
+                <th>HORAS RESTANTES DE COMBUSTIBLE</th>
+              </tr>
+            </thead>
+            <tbody id="reportTableBody"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -358,6 +519,7 @@
     const PERIOD_THEMES = {
       daily: {
         title: 'RESUMEN DIARIO DE MAQUINARIA HORAS Y COMBUSTIBLE',
+        tableTitle: 'REPORTE DIARIO MAQUINARIA (HORAS, COMBUSTIBLE Y HORAS RESTANTES PARA MTTO)',
         selectorLabel: 'FECHA',
         flagColors: [
           '#f59e0b', // Ámbar
@@ -374,12 +536,16 @@
         lineBg: 'rgba(2, 132, 199, 0.15)',
         tabBg: '#f59e0b',
         tabText: '#0f172a',
+        mttoHeaderBg: '#b45309',
+        mttoHeaderText: '#ffffff',
+        mttoCellBg: '#dbeafe',
         badgeBg: '#fef3c7',
         badgeText: '#b45309',
         badgeBorder: '#fcd34d'
       },
       weekly: {
         title: 'RESUMEN SEMANAL DE MAQUINARIA HORAS Y COMBUSTIBLE',
+        tableTitle: 'REPORTE SEMANAL MAQUINARIA (HORAS, COMBUSTIBLE Y HORAS RESTANTES PARA MTTO)',
         selectorLabel: 'SEMANA',
         flagColors: [
           '#10b981', // Esmeralda
@@ -396,12 +562,16 @@
         lineBg: 'rgba(99, 102, 241, 0.15)',
         tabBg: '#10b981',
         tabText: '#ffffff',
+        mttoHeaderBg: '#065f46',
+        mttoHeaderText: '#ffffff',
+        mttoCellBg: '#d1fae5',
         badgeBg: '#d1fae5',
         badgeText: '#065f46',
         badgeBorder: '#6ee7b7'
       },
       monthly: {
         title: 'RESUMEN MENSUAL DE MAQUINARIA HORAS Y COMBUSTIBLE',
+        tableTitle: 'REPORTE MENSUAL MAQUINARIA (HORAS, COMBUSTIBLE Y HORAS RESTANTES PARA MTTO)',
         selectorLabel: 'MES',
         flagColors: [
           '#2563eb', // Azul cobalto
@@ -418,6 +588,9 @@
         lineBg: 'rgba(225, 29, 72, 0.15)',
         tabBg: '#2563eb',
         tabText: '#ffffff',
+        mttoHeaderBg: '#1e3a8a',
+        mttoHeaderText: '#ffffff',
+        mttoCellBg: '#e0e7ff',
         badgeBg: '#dbeafe',
         badgeText: '#1e40af',
         badgeBorder: '#93c5fd'
@@ -605,16 +778,23 @@
           throw new Error('La hoja no contiene suficientes filas.');
         }
 
-        // A(0):LUGAR, B(1):AÑO, C(2):SEM, D(3):MES, E(4):FECHA, F(5):CODIGO, G(6):OPERADOR, H(7):EQUIPO,
-        // I(8):H.INICIAL, J(9):H.FINAL, K(10):TOTAL, L(11):MTTO, M(12):COMBUSTIBLE ABASTECIDO
-        rawRows = matrix.slice(1).map(cols => {
+        // Columnas Google Sheets:
+        // A(0):LUGAR, B(1):AÑO, C(2):SEM, D(3):MES, E(4):FECHA, F(5):CODIGO, G(6):OPERADOR, H(7):UNIDAD/EQUIPO,
+        // I(8):H.INICIAL, J(9):H.FINAL, K(10):TOTAL HORAS, L(11):HORAS RESTANTES PARA MTTO,
+        // M(12):COMBUSTIBLE ABASTECIDO, N(13):GAL/H, O(14):RENDIMIENTO, P(15):HORAS RESTANTES DE COMBUSTIBLE
+        rawRows = matrix.slice(1).map((cols, rowIdx) => {
           const getCol = (idx) => cleanSpaces(cols[idx] || '');
           const fechaObj = parseFechaStr(getCol(4));
           const anio = getCol(1) || (fechaObj ? String(fechaObj.getFullYear()) : '');
           const sem = getCol(2);
           const mes = getCol(3);
+          const hIniRaw = getCol(8);
+          const hFinRaw = getCol(9);
+          const mttoRaw = getCol(11);
+          const combRestRaw = getCol(15);
 
           return {
+            rowIdx,
             lugar: getCol(0) || 'SIN DATA',
             anio: anio,
             sem: sem,
@@ -625,8 +805,16 @@
             codigo: getCol(5),
             operador: getCol(6),
             equipo: normalizeEquipoName(getCol(7)),
-            totalHoras: parseNum(getCol(10)), // Columna K
-            combustible: parseNum(getCol(12)) // Columna M
+            hIniRaw: hIniRaw,
+            hInicial: hIniRaw !== '' ? parseNum(hIniRaw) : null,
+            hFinRaw: hFinRaw,
+            hFinal: hFinRaw !== '' ? parseNum(hFinRaw) : null,
+            totalHoras: parseNum(getCol(10)),                                       // Columna K
+            mttoRaw: mttoRaw,                                                       // Columna L texto
+            horasRestantesMtto: mttoRaw !== '' ? parseNum(mttoRaw) : null,          // Columna L número
+            combustible: parseNum(getCol(12)),                                      // Columna M
+            combRestRaw: combRestRaw,                                               // Columna P texto
+            horasRestantesComb: combRestRaw !== '' ? parseNum(combRestRaw) : null   // Columna P número
           };
         }).filter(row => row.codigo && row.codigo.toUpperCase() !== 'CODIGO');
 
@@ -752,6 +940,9 @@
     function applyThemeColors(theme) {
       document.documentElement.style.setProperty('--accent', theme.tabBg);
       document.documentElement.style.setProperty('--accent-text', theme.tabText);
+      document.documentElement.style.setProperty('--mtto-header-bg', theme.mttoHeaderBg);
+      document.documentElement.style.setProperty('--mtto-header-text', theme.mttoHeaderText);
+      document.documentElement.style.setProperty('--mtto-cell-bg', theme.mttoCellBg);
       document.documentElement.style.setProperty('--badge-bg', theme.badgeBg);
       document.documentElement.style.setProperty('--badge-text', theme.badgeText);
       document.documentElement.style.setProperty('--badge-border', theme.badgeBorder);
@@ -778,8 +969,6 @@
         activeData = baseFiltered.filter(r => r.fechaISO === selectedTemporal);
         const ref = rawRows.find(r => r.fechaISO === selectedTemporal);
         scopeLabel = ref ? ref.fechaStr : selectedTemporal;
-        document.getElementById('kpiHorasLabel').textContent = `Horas Trabajadas (${scopeLabel})`;
-        document.getElementById('kpiCombLabel').textContent = `Combustible Col. M (${scopeLabel})`;
       } else if (currentPeriod === 'weekly') {
         const [targetAnio, targetSem] = selectedTemporal.split('||');
         activeData = baseFiltered.filter(r =>
@@ -787,8 +976,6 @@
           (!targetAnio || !r.anio || r.anio === targetAnio)
         );
         scopeLabel = `Semana ${targetSem}${targetAnio ? ' - ' + targetAnio : ''}`;
-        document.getElementById('kpiHorasLabel').textContent = `Horas Acumuladas (${scopeLabel})`;
-        document.getElementById('kpiCombLabel').textContent = `Combustible Col. M (${scopeLabel})`;
       } else {
         const [targetAnio, targetMesLower] = selectedTemporal.split('||');
         activeData = baseFiltered.filter(r =>
@@ -797,27 +984,17 @@
         );
         const mesCap = targetMesLower ? targetMesLower.charAt(0).toUpperCase() + targetMesLower.slice(1) : '-';
         scopeLabel = `${mesCap}${targetAnio ? ' ' + targetAnio : ''}`;
-        document.getElementById('kpiHorasLabel').textContent = `Horas Acumuladas (${scopeLabel})`;
-        document.getElementById('kpiCombLabel').textContent = `Combustible Col. M (${scopeLabel})`;
       }
 
       document.getElementById('mainChartTitle').textContent = theme.title;
       document.getElementById('activeScopeBadge').textContent = scopeLabel || '-';
-
-      // KPIs (3 principales)
-      const totalHoras = activeData.reduce((acc, r) => acc + r.totalHoras, 0);
-      const totalComb = activeData.reduce((acc, r) => acc + r.combustible, 0);
-      const activeRows = activeData.filter(r => r.totalHoras > 0);
-      const uniqueActiveMachines = new Set(activeRows.map(r => r.codigo)).size;
-
-      document.getElementById('kpiHoras').textContent = `${totalHoras.toLocaleString('es-PE', { maximumFractionDigits: 1 })} h`;
-      document.getElementById('kpiCombustible').textContent = `${totalComb.toLocaleString('es-PE', { maximumFractionDigits: 1 })} Gal`;
-      document.getElementById('kpiEquipos').textContent = uniqueActiveMachines;
+      document.getElementById('tableScopeDate').textContent = scopeLabel || '-';
+      document.getElementById('tableBannerTitle').textContent = theme.tableTitle;
 
       renderMainChart(activeData, theme, selectedEquipo);
+      renderReportTable(activeData, selectedEquipo, selectedLugar);
     }
 
-    // Dibuja píldoras redondeadas de alta visibilidad para las etiquetas de datos
     function drawPillBadge(ctx, text, centerX, centerY, bgColor, textColor, borderColor = '#ffffff') {
       ctx.save();
       ctx.font = '800 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
@@ -887,7 +1064,6 @@
             activeSegments.push({ val, el });
           });
 
-          // Si trabajó en 2 o más lugares (modo bandera), mostrar solo las horas de cada franja dentro de la barra
           if (activeSegments.length > 1) {
             activeSegments.forEach(({ val, el }) => {
               const segHeight = Math.abs(el.base - el.y);
@@ -909,7 +1085,6 @@
             });
           }
 
-          // Píldora del total de horas encima de la barra
           if (totalH > 0 && topY < Infinity) {
             const xPos = chart.scales.x.getPixelForValue(i);
             const barBadgeY = Math.max(38, topY - 14);
@@ -920,7 +1095,6 @@
           }
         }
 
-        // Píldora de Combustible (Gal) sobre la línea punteada sin colisión
         chart.data.datasets.forEach((dataset, dsIndex) => {
           if (dataset.type !== 'line') return;
           const meta = chart.getDatasetMeta(dsIndex);
@@ -957,7 +1131,6 @@
 
       const orderedEquipos = [...targetEquipos, ...extraEquipos].sort(compareEquipos);
 
-      // Lugares activos (Columna A) para leyenda y barras modo bandera
       const activeLugaresSet = new Set();
       data.forEach(r => {
         if (r.totalHoras > 0) activeLugaresSet.add(r.lugar);
@@ -1043,7 +1216,6 @@
                 font: { size: 12.5, weight: '700' },
                 padding: 20,
                 usePointStyle: true,
-                // Ocultar "Combustible Abastecido (Gal)" de la leyenda inferior y dejar solo los lugares
                 filter(legendItem, chartData) {
                   return chartData.datasets[legendItem.datasetIndex].type !== 'line';
                 }
@@ -1123,6 +1295,189 @@
             }
           }
         }
+      });
+    }
+
+    // Formatea el nombre de la unidad poniendo el modelo entre paréntesis en negrita
+    function formatUnidadHTML(name) {
+      return String(name).replace(/\(([^)]+)\)/g, '<strong>($1)</strong>');
+    }
+
+    // Formatea horómetros con máximo 1 decimal limpio (ej. 9316.3 o 6027)
+    function formatHorometro(val) {
+      if (val === null || val === undefined || isNaN(val)) return '-';
+      return Number.isInteger(val) ? String(val) : val.toFixed(1);
+    }
+
+    // Renderiza la tabla detallada debajo del gráfico respetando los mismos filtros
+    function renderReportTable(activeData, selectedEquipo, selectedLugar) {
+      const tbody = document.getElementById('reportTableBody');
+      tbody.innerHTML = '';
+
+      const targetEquipos = selectedEquipo === 'ALL'
+        ? [...ORDEN_EQUIPOS]
+        : [selectedEquipo];
+
+      const extraEquipos = [...new Set(activeData.map(r => normalizeEquipoName(r.equipo)))]
+        .filter(eq => selectedEquipo === 'ALL' && !targetEquipos.some(t => t.toLowerCase() === eq.toLowerCase()));
+
+      let orderedEquipos = [...targetEquipos, ...extraEquipos].sort(compareEquipos);
+
+      // Si se filtró por un lugar específico, mostrar los equipos presentes en ese lugar
+      if (selectedLugar !== 'ALL') {
+        const equiposEnLugar = new Set(activeData.map(r => normalizeEquipoName(r.equipo)));
+        orderedEquipos = orderedEquipos.filter(eq => equiposEnLugar.has(eq));
+      }
+
+      // Construir filas consolidadas por máquina
+      const rowsToRender = orderedEquipos.map(eq => {
+        const matches = activeData
+          .filter(r => normalizeEquipoName(r.equipo).toLowerCase() === eq.toLowerCase())
+          .sort((a, b) => {
+            const tA = a.fechaObj ? a.fechaObj.getTime() : 0;
+            const tB = b.fechaObj ? b.fechaObj.getTime() : 0;
+            return tA !== tB ? tA - tB : a.rowIdx - b.rowIdx;
+          });
+
+        if (matches.length === 0) {
+          return {
+            lugar: '-',
+            unidad: eq,
+            hInicial: null,
+            hFinal: null,
+            totalHoras: 0,
+            mttoRaw: '',
+            mttoNum: null,
+            combustible: 0,
+            combRestNum: null
+          };
+        }
+
+        // Lugares únicos donde trabajó la máquina en el periodo filtrado
+        const lugaresUnicos = [...new Set(matches.map(m => m.lugar).filter(l => l && l !== 'SIN DATA'))];
+        const lugarStr = lugaresUnicos.length > 0 ? lugaresUnicos.join(' / ') : matches[0].lugar;
+
+        // H. Inicial (primer registro del periodo) y H. Final (último registro del periodo)
+        const validHIni = matches.filter(m => m.hInicial !== null);
+        const validHFin = matches.filter(m => m.hFinal !== null);
+        const hInicial = validHIni.length > 0 ? validHIni[0].hInicial : null;
+        const hFinal = validHFin.length > 0 ? validHFin[validHFin.length - 1].hFinal : null;
+
+        // Total Horas (Columna K) y Combustible Abastecido (Columna M) acumulados
+        const totalHoras = matches.reduce((sum, m) => sum + m.totalHoras, 0);
+        const combustible = matches.reduce((sum, m) => sum + m.combustible, 0);
+
+        // Último estado de Mantenimiento (Columna L) y Horas Restantes de Combustible (Columna P)
+        const validMtto = matches.filter(m => m.mttoRaw !== '');
+        const lastMtto = validMtto.length > 0 ? validMtto[validMtto.length - 1] : null;
+
+        const validCombRest = matches.filter(m => m.horasRestantesComb !== null);
+        const lastCombRest = validCombRest.length > 0 ? validCombRest[validCombRest.length - 1] : null;
+
+        return {
+          lugar: lugarStr,
+          unidad: eq,
+          hInicial,
+          hFinal,
+          totalHoras,
+          mttoRaw: lastMtto ? lastMtto.mttoRaw : '',
+          mttoNum: lastMtto ? lastMtto.horasRestantesMtto : null,
+          combustible,
+          combRestNum: lastCombRest ? lastCombRest.horasRestantesComb : null
+        };
+      });
+
+      const maxHoras = Math.max(...rowsToRender.map(r => r.totalHoras), 0);
+
+      rowsToRender.forEach(item => {
+        const tr = document.createElement('tr');
+
+        // 1. LUGAR (Columna A)
+        const tdLugar = document.createElement('td');
+        tdLugar.className = 'td-lugar';
+        tdLugar.textContent = item.lugar;
+        tr.appendChild(tdLugar);
+
+        // 2. UNIDAD (Columna H)
+        const tdUnidad = document.createElement('td');
+        tdUnidad.className = 'td-unidad';
+        tdUnidad.innerHTML = formatUnidadHTML(item.unidad);
+        tr.appendChild(tdUnidad);
+
+        // 3. H. INICIAL (Columna I)
+        const tdHIni = document.createElement('td');
+        tdHIni.className = 'td-num';
+        tdHIni.textContent = formatHorometro(item.hInicial);
+        tr.appendChild(tdHIni);
+
+        // 4. H. FINAL (Columna J)
+        const tdHFin = document.createElement('td');
+        tdHFin.className = 'td-num';
+        tdHFin.textContent = formatHorometro(item.hFinal);
+        tr.appendChild(tdHFin);
+
+        // 5. TOTAL HORAS (Columna K) con mini barra proporcional
+        const tdTotal = document.createElement('td');
+        tdTotal.className = 'td-num';
+        if (item.totalHoras > 0) {
+          const pct = maxHoras > 0 ? Math.min(100, Math.round((item.totalHoras / maxHoras) * 100)) : 0;
+          const horasFmt = Number.isInteger(item.totalHoras) ? String(item.totalHoras) : item.totalHoras.toFixed(1);
+          tdTotal.innerHTML = `
+            <div class="hours-bar-cell">
+              <div class="hours-bar-track">
+                <div class="hours-bar-fill" style="width: ${pct}%;"></div>
+              </div>
+              <span class="hours-bar-value">${horasFmt}</span>
+            </div>
+          `;
+        } else {
+          tdTotal.textContent = '0';
+        }
+        tr.appendChild(tdTotal);
+
+        // 6. HORAS RESTANTES PARA MTTO (Columna L - pasados de horas en ROJO)
+        const tdMtto = document.createElement('td');
+        const rawUpper = item.mttoRaw.toUpperCase();
+        const isOverdue = rawUpper.includes('RETRASADO') || (item.mttoNum !== null && item.mttoNum < 0);
+
+        if (item.mttoRaw === '') {
+          tdMtto.className = 'td-mtto-normal';
+          tdMtto.textContent = '';
+        } else if (isOverdue) {
+          tdMtto.className = 'td-mtto-overdue';
+          if (rawUpper.includes('RETRASADO')) {
+            tdMtto.textContent = item.mttoRaw;
+          } else {
+            const absHrs = Math.abs(item.mttoNum);
+            const hrsFmt = Number.isInteger(absHrs) ? String(absHrs) : absHrs.toFixed(1);
+            tdMtto.textContent = `MTTO RETRASADO POR ${hrsFmt} Horas`;
+          }
+        } else {
+          tdMtto.className = 'td-mtto-normal';
+          if (rawUpper.includes('HORA')) {
+            tdMtto.textContent = item.mttoRaw;
+          } else if (item.mttoNum !== null) {
+            const hrsFmt = Number.isInteger(item.mttoNum) ? String(item.mttoNum) : item.mttoNum.toFixed(1);
+            tdMtto.textContent = `${hrsFmt} Horas`;
+          } else {
+            tdMtto.textContent = item.mttoRaw;
+          }
+        }
+        tr.appendChild(tdMtto);
+
+        // 7. COMBUSTIBLE ABASTECIDO (Columna M)
+        const tdComb = document.createElement('td');
+        tdComb.className = 'td-comb';
+        tdComb.textContent = item.combustible > 0 ? `${item.combustible.toFixed(2)} Gal` : '';
+        tr.appendChild(tdComb);
+
+        // 8. HORAS RESTANTES DE COMBUSTIBLE (Columna P)
+        const tdCombRest = document.createElement('td');
+        tdCombRest.className = 'td-num';
+        tdCombRest.textContent = item.combRestNum !== null ? item.combRestNum.toFixed(2) : '';
+        tr.appendChild(tdCombRest);
+
+        tbody.appendChild(tr);
       });
     }
 
